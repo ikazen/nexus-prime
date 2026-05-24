@@ -2,23 +2,25 @@
 
 일상 운영 절차. 비정상 진단·해결은 별도 troubleshooting (없음 — 발생 시 추가).
 
-## 호스트 재생성 (worker-vm 디스크 비율 변경 등)
+## 인스턴스 재설치 (정공법, L18)
 
-1. `tofu` 에서 boot_volume_size_in_gbs 수정
-2. `tofu taint oci_core_instance.worker_vm` (재생성 강제)
-3. `tofu apply` — 인스턴스 재생성, public IP 변경 (없으니 무관), Tailscale 재가입 필요
-4. ssh + `tailscale up --ssh` 재가입
-5. `bash hosts/worker-vm/host-setup.sh`
-6. airflow-stack 측 절차 — edge worker 재기동
+변경 (boot size·shape·image 등) 또는 장애 복구 모두 같은 절차. in-place 변경 안 함.
 
-## ops-vm 부트 디스크 확장
+1. (변경 시) `tofu/variables.tf` 또는 `terraform.tfvars` 에서 값 수정
+2. `airflow-stack` 측 `docker compose down` (3 노드 — ops/worker/mac)
+3. `cd tofu && ./reinstall-instances.sh`
+   - 인스턴스 destroy (VCN/NSG/Reserved IP 유지) → retry-apply (capacity 매번 풀릴 때까지)
+4. ssh + `sudo tailscale up --ssh` 재가입 (3 노드)
+5. `bash hosts/<host>/host-setup.sh` (mac 은 README 절차)
+6. ops-vm `compose/_hosts/ops-vm.yml` 재기동
+7. `airflow-stack` 재기동
 
-1. `tofu` 에서 `boot_volume_size_in_gbs` 수정 (online resize, in-place)
-2. `tofu apply`
-3. ops-vm 안: `sudo growpart /dev/sda 1 && sudo resize2fs /dev/sda1`
-4. `df -h /` 확인
+데이터 손실:
+- postgres `airflow` database — airflow-init 의 `db migrate` + `variables import` 가 부활
+- registry storage — task image 가 캐시. 첫 task 시 push 다시
+- 두 가지 다 L7 (백업 안 함) 와 L18 정합
 
-registry storage 가 부트 안이라 부트 확장이 곧 registry 확장.
+ops-vm reserved IP 는 유지 (별도 리소스). 인스턴스 재생성 시 새 vnic 에 자동 attach.
 
 ## Postgres 신규 DB / user 추가 (공유 DB, L4)
 
@@ -82,8 +84,4 @@ colima stop && colima start --cpu 6 --memory 8
 
 ## 인스턴스 / 메타 손실 시 재배포
 
-1. `tofu apply` (없는 리소스만 재생성)
-2. 각 호스트 setup 재실행
-3. airflow-stack 측 재셋업 (별도 절차)
-
-백업 없음 (L7). lol-list 데이터는 Supabase 외부라 영향 없음. airflow 메타 DB 는 disposable (Variable / Connection 미사용).
+장애 복구 = "인스턴스 재설치" 와 동일 절차 (L18). 위 섹션 참조.
