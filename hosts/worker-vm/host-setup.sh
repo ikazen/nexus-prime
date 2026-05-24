@@ -38,4 +38,16 @@ sudo apt-get install -y -qq unattended-upgrades
 printf 'APT::Periodic::Update-Package-Lists "1";\nAPT::Periodic::Unattended-Upgrade "1";\n' \
   | sudo tee /etc/apt/apt.conf.d/20auto-upgrades >/dev/null
 
+# Tailscale 설치 (없으면)
+if ! command -v tailscale >/dev/null 2>&1; then
+  curl -fsSL https://tailscale.com/install.sh | sh
+  echo "tailscale 설치 완료 — sudo tailscale up --ssh 로 인증 필요"
+fi
+
+# Tailscale 호스트명 설정 (이미 up 상태일 때만)
+if tailscale status >/dev/null 2>&1; then
+  sudo tailscale set --hostname oci-vm-worker
+  echo "tailscale hostname = oci-vm-worker"
+fi
+
 echo "=== worker-vm host-setup 완료 ==="

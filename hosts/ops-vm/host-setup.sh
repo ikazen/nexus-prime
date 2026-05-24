@@ -46,5 +46,16 @@ else
   echo "nexus network 이미 있음"
 fi
 
+# Tailscale 설치 (없으면)
+if ! command -v tailscale >/dev/null 2>&1; then
+  curl -fsSL https://tailscale.com/install.sh | sh
+  echo "tailscale 설치 완료 — sudo tailscale up --ssh 로 인증 필요"
+fi
+
+# Tailscale 호스트명 설정 (이미 up 상태일 때만)
+if tailscale status >/dev/null 2>&1; then
+  sudo tailscale set --hostname oci-vm-ops
+  echo "tailscale hostname = oci-vm-ops"
+fi
+
 echo "=== ops-vm host-setup 완료 ==="
-echo "block volume mount (registry data) 는 README.md 의 별도 절차 참조"
