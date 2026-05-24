@@ -7,8 +7,8 @@ services:
       REGISTRY_TITLE: nexus-prime registry
       DELETE_IMAGES: "true"
       SHOW_CONTENT_DIGEST: "true"
-    ports:
-      - "${OPS_TAILNET_IP}:5001:80"
+    expose:
+      - "80"
     logging:
       driver: json-file
       options:

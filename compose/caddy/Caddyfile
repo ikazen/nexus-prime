@@ -1,3 +1,13 @@
+http://oci-vm-ops {
+    handle_path /registry* {
+        reverse_proxy registry-ui:80
+    }
+
+    handle_path /rover* {
+        reverse_proxy rover:9000
+    }
+}
+
 {$AIRFLOW_DOMAIN} {
     header {
         Strict-Transport-Security "max-age=31536000"
