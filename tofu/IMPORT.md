@@ -26,9 +26,8 @@
 | NSG ops | VCN 안 → Network Security Groups | `<ops-nsg-ocid>` |
 | NSG worker | VCN 안 → Network Security Groups | `<worker-nsg-ocid>` |
 | NSG rule (ops 443 tcp) | ops-nsg 안 → Security Rules | `<rule-id-1>` |
-| NSG rule (ops 443 udp) | ops-nsg 안 → Security Rules | `<rule-id-2>` |
-| NSG rule (ops 80 tcp) | ops-nsg 안 → Security Rules | `<rule-id-3>` |
-| NSG rule (ops 22 tcp) | ops-nsg 안 → Security Rules | `<rule-id-4>` |
+| NSG rule (ops 80 tcp) | ops-nsg 안 → Security Rules | `<rule-id-2>` |
+| NSG rule (ops 22 tcp) | ops-nsg 안 → Security Rules | `<rule-id-3>` |
 | Instance ops-vm | Compute → Instances | `<ops-vm-ocid>` |
 | Instance worker-vm | Compute → Instances | `<worker-vm-ocid>` |
 | Reserved Public IP | Networking → Reserved Public IPs | `<reserved-ip-ocid>` |
@@ -63,9 +62,8 @@ tofu import oci_core_network_security_group.worker <worker-nsg-ocid>
 
 # NSG rules — id 형식: <nsg-ocid>/<rule-id>
 tofu import oci_core_network_security_group_security_rule.ops_https_tcp <ops-nsg-ocid>/<rule-id-1>
-tofu import oci_core_network_security_group_security_rule.ops_https_udp <ops-nsg-ocid>/<rule-id-2>
-tofu import oci_core_network_security_group_security_rule.ops_http     <ops-nsg-ocid>/<rule-id-3>
-tofu import oci_core_network_security_group_security_rule.ops_ssh      <ops-nsg-ocid>/<rule-id-4>
+tofu import oci_core_network_security_group_security_rule.ops_http      <ops-nsg-ocid>/<rule-id-2>
+tofu import oci_core_network_security_group_security_rule.ops_ssh       <ops-nsg-ocid>/<rule-id-3>
 
 # Instances
 tofu import oci_core_instance.ops_vm    <ops-vm-ocid>
@@ -88,6 +86,13 @@ tofu plan
 - `oci_core_instance.worker_vm` boot_volume_size_in_gbs: **75 → 50** (축소 = OCI 가 ForceNew → 인스턴스 재생성)
 
 그 외 (VCN / NSG / RT / Subnet / Reserved IP 등) **차이 0** 이어야 함. 차이 있으면 코드와 실제 환경 불일치 — 코드 수정 또는 실제 환경 확인.
+
+코드 수정 이력 (import 준비 중 발견):
+- IG display_name `main-ig` → `main-igw` (OCI 실제 이름)
+- SG display_name `main-sg` → `main-sgw`
+- public RT display_name `public-rt` → `Default Route Table for main-vcn`
+- Reserved IP display_name `ops-vm-reserved-ip` → `ops-vm-ip`
+- `ops_https_udp` (NSG UDP 443) 룰 제거 — 실제 환경에 없음
 
 ## 적용 (첫 reinstall, L18)
 

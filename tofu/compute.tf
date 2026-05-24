@@ -69,7 +69,7 @@ data "oci_core_private_ips" "ops_vm_private_ips" {
 
 resource "oci_core_public_ip" "ops_reserved" {
   compartment_id = var.compartment_ocid
-  display_name   = "ops-vm-reserved-ip"
+  display_name   = "ops-vm-ip"
   lifetime       = "RESERVED"
   private_ip_id  = data.oci_core_private_ips.ops_vm_private_ips.private_ips[0].id
 }

@@ -8,7 +8,7 @@ resource "oci_core_vcn" "main" {
 resource "oci_core_internet_gateway" "ig" {
   compartment_id = var.compartment_ocid
   vcn_id         = oci_core_vcn.main.id
-  display_name   = "main-ig"
+  display_name   = "main-igw"
 }
 
 resource "oci_core_nat_gateway" "nat" {
@@ -20,7 +20,7 @@ resource "oci_core_nat_gateway" "nat" {
 resource "oci_core_service_gateway" "sg" {
   compartment_id = var.compartment_ocid
   vcn_id         = oci_core_vcn.main.id
-  display_name   = "main-sg"
+  display_name   = "main-sgw"
   services {
     service_id = local.oci_service_id
   }
@@ -29,7 +29,7 @@ resource "oci_core_service_gateway" "sg" {
 resource "oci_core_route_table" "public_rt" {
   compartment_id = var.compartment_ocid
   vcn_id         = oci_core_vcn.main.id
-  display_name   = "public-rt"
+  display_name   = "Default Route Table for main-vcn"
   route_rules {
     destination       = "0.0.0.0/0"
     destination_type  = "CIDR_BLOCK"

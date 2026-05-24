@@ -18,19 +18,6 @@ resource "oci_core_network_security_group_security_rule" "ops_https_tcp" {
   }
 }
 
-resource "oci_core_network_security_group_security_rule" "ops_https_udp" {
-  network_security_group_id = oci_core_network_security_group.ops.id
-  direction                 = "INGRESS"
-  protocol                  = "17"
-  source                    = "0.0.0.0/0"
-  source_type               = "CIDR_BLOCK"
-  udp_options {
-    destination_port_range {
-      min = 443
-      max = 443
-    }
-  }
-}
 
 resource "oci_core_network_security_group_security_rule" "ops_http" {
   network_security_group_id = oci_core_network_security_group.ops.id
