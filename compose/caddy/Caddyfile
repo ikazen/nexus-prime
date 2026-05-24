@@ -1,0 +1,16 @@
+{$AIRFLOW_DOMAIN} {
+    header {
+        Strict-Transport-Security "max-age=31536000"
+        X-Frame-Options "DENY"
+        X-Content-Type-Options "nosniff"
+    }
+
+    # edge worker v1 API — Tailscale 직결 전용, 공인 노출 차단
+    handle /edge_worker/v1/* {
+        respond 404
+    }
+
+    handle {
+        reverse_proxy api-server:8080
+    }
+}
