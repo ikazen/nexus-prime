@@ -33,6 +33,32 @@ docker exec -it postgres psql -U postgres -c "CREATE USER <user> WITH PASSWORD '
 docker exec -it postgres psql -U postgres -c "GRANT ALL ON DATABASE <db> TO <user>;"
 ```
 
+## Private Registry 사용
+
+주소: `oci-vm-ops:5000` (tailnet 전용 HTTP — 공인 노출 없음).
+
+신규 호스트에서 처음 쓸 때 insecure registry 등록 필요 (한 번만):
+
+```bash
+# Linux (ops-vm, worker-vm)
+echo '{"insecure-registries": ["oci-vm-ops:5000"]}' | sudo tee /etc/docker/daemon.json
+sudo systemctl restart docker
+
+# mac-server (colima)
+# ~/.colima/default/colima.yaml 에 아래 추가 후 colima restart
+# docker:
+#   insecure-registries:
+#     - oci-vm-ops:5000
+```
+
+기본 사용:
+
+```bash
+docker tag <image> oci-vm-ops:5000/<name>:<tag>
+docker push oci-vm-ops:5000/<name>:<tag>
+docker pull oci-vm-ops:5000/<name>:<tag>
+```
+
 ## Registry GC
 
 `registry:2` 는 자동 GC 안 함. 주기 (월 1 회) 수동:
