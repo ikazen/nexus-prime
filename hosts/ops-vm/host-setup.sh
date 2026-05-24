@@ -39,8 +39,8 @@ printf 'APT::Periodic::Update-Package-Lists "1";\nAPT::Periodic::Unattended-Upgr
   | sudo tee /etc/apt/apt.conf.d/20auto-upgrades >/dev/null
 
 # nexus docker network — caddy / postgres / registry / airflow 서비스 공유
-if ! docker network inspect nexus >/dev/null 2>&1; then
-  docker network create nexus
+if ! sudo docker network inspect nexus >/dev/null 2>&1; then
+  sudo docker network create nexus
   echo "nexus network 생성"
 else
   echo "nexus network 이미 있음"
