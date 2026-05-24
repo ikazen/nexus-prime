@@ -24,6 +24,8 @@ tofu output    # IP / OCID 메모
 
 산출물: VCN / 서브넷 2 / NSG 2 / Gateway 3 / 인스턴스 2 (ops-vm·worker-vm) / Reserved IP.
 
+**기존 OCI 환경을 흡수 (import) 하려면** → `tofu/IMPORT.md` 참조.
+
 ## 2. DNS
 
 외부 DNS provider 에서 `airflow.<your-domain>` A → `tofu output ops_vm_public_ip`. TTL 60 권장 (초기 셋업 중 변경 잦음).
