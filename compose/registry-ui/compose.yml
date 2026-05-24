@@ -3,7 +3,7 @@ services:
     image: joxit/docker-registry-ui:latest
     container_name: registry-ui
     environment:
-      REGISTRY_URL: http://registry:5000
+      NGINX_PROXY_PASS_URL: http://registry:5000
       REGISTRY_TITLE: nexus-prime registry
       DELETE_IMAGES: "true"
       SHOW_CONTENT_DIGEST: "true"
