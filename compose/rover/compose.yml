@@ -1,6 +1,6 @@
 services:
   rover:
-    image: im2nguyen/rover
+    image: oci-vm-ops:5000/rover:arm64
     container_name: rover
     ports:
       - "9000:9000"
