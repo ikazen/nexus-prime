@@ -33,6 +33,27 @@ docker exec -it postgres psql -U postgres -c "CREATE USER <user> WITH PASSWORD '
 docker exec -it postgres psql -U postgres -c "GRANT ALL ON DATABASE <db> TO <user>;"
 ```
 
+## 내부 DNS (dnsmasq)
+
+`*.internal` → ops-vm tailnet IP 로 해석. tailnet 내 어디서든 `registry.internal`, `rover.internal` 등으로 접근 가능.
+
+**Tailscale 어드민 콘솔 설정 (최초 1회):**
+1. [Tailscale Admin → DNS](https://login.tailscale.com/admin/dns)
+2. Nameservers → Add nameserver → Custom
+3. Nameserver: `<OPS_TAILNET_IP>`, Restrict to domain: `internal`
+
+**dnsmasq 이미지 재빌드 (registry 소실 시):**
+```bash
+ssh ops-vm
+cd ~/nexus-prime/compose/dnsmasq
+docker build -t oci-vm-ops:5000/dnsmasq:latest .
+docker push oci-vm-ops:5000/dnsmasq:latest
+```
+
+**서비스 추가 시:**
+- Caddyfile에 `http://<name>.internal { reverse_proxy <container>:<port> }` 추가
+- dnsmasq는 `*.internal` 전부를 ops-vm으로 해석하므로 DNS 변경 불필요
+
 ## Private Registry 사용
 
 주소: `oci-vm-ops:5000` (tailnet 전용 HTTP — 공인 노출 없음).

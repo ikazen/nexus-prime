@@ -1,11 +1,9 @@
-http://oci-vm-ops {
-    handle_path /registry* {
-        reverse_proxy registry-ui:80
-    }
+http://registry.internal {
+    reverse_proxy registry-ui:80
+}
 
-    handle_path /rover* {
-        reverse_proxy rover:9000
-    }
+http://rover.internal {
+    reverse_proxy rover:9000
 }
 
 {$AIRFLOW_DOMAIN} {

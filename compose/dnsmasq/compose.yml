@@ -1,0 +1,21 @@
+services:
+  dnsmasq:
+    image: oci-vm-ops:5000/dnsmasq:latest
+    container_name: dnsmasq
+    network_mode: host
+    command:
+      - --address=/.internal/${OPS_TAILNET_IP}
+      - --listen-address=${OPS_TAILNET_IP}
+      - --bind-interfaces
+      - --server=1.1.1.1
+      - --server=8.8.8.8
+      - --domain-needed
+      - --bogus-priv
+    cap_add:
+      - NET_ADMIN
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "2"
+    restart: unless-stopped
