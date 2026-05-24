@@ -1,0 +1,15 @@
+# ops-vm 인프라 컨테이너 wrapper.
+# 기능별 compose 를 include (Docker Compose v2.20+).
+#
+# 사용:
+#   cd nexus-prime
+#   docker compose -f compose/_hosts/ops-vm.yml --env-file compose/_hosts/ops-vm.env up -d
+#
+# 사전 조건:
+#   - docker network create nexus  (한 번만)
+#   - REGISTRY_DATA_PATH 의 호스트 경로 = block volume mount (docs/runbook.md)
+
+include:
+  - path: ../caddy/compose.yml
+  - path: ../postgres/compose.yml
+  - path: ../registry/compose.yml

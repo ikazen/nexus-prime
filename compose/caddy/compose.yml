@@ -2,7 +2,8 @@ services:
   caddy:
     image: caddy:2-alpine
     container_name: caddy
-    env_file: .env
+    environment:
+      AIRFLOW_DOMAIN: ${AIRFLOW_DOMAIN}
     ports:
       - "80:80"
       - "443:443"
