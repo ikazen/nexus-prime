@@ -12,3 +12,4 @@ include:
   - path: ../caddy/compose.yml
   - path: ../postgres/compose.yml
   - path: ../registry/compose.yml
+  - path: ../rover/compose.yml

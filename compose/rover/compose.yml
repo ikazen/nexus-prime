@@ -1,0 +1,21 @@
+services:
+  rover:
+    image: im2nguyen/rover
+    container_name: rover
+    ports:
+      - "9000:9000"
+    volumes:
+      - ./plan.json:/src/plan.json:ro
+    command: -planJSONPath /src/plan.json
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "2"
+    networks:
+      - nexus
+    restart: unless-stopped
+
+networks:
+  nexus:
+    external: true
