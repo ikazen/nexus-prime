@@ -13,3 +13,4 @@ include:
   - path: ../postgres/compose.yml
   - path: ../registry/compose.yml
   - path: ../rover/compose.yml
+  - path: ../registry-ui/compose.yml

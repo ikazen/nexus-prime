@@ -1,0 +1,23 @@
+services:
+  registry-ui:
+    image: joxit/docker-registry-ui:latest
+    container_name: registry-ui
+    environment:
+      REGISTRY_URL: http://registry:5000
+      REGISTRY_TITLE: nexus-prime registry
+      DELETE_IMAGES: "true"
+      SHOW_CONTENT_DIGEST: "true"
+    ports:
+      - "${OPS_TAILNET_IP}:5001:80"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "2"
+    networks:
+      - nexus
+    restart: unless-stopped
+
+networks:
+  nexus:
+    external: true
