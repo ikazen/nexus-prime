@@ -7,7 +7,12 @@
 - OCI 테넌시 + API key (또는 OCI CLI 셋업 완료)
 - 사용자 도메인 + 외부 DNS 액세스
 - Tailscale 계정
-- 로컬: `tofu` (또는 `terraform`), `docker`, `gh` (선택)
+- 로컬: `tofu`, `docker`, `gh` (선택)
+
+```bash
+# OpenTofu 설치 (Linux/WSL)
+curl -fsSL https://get.opentofu.org/install-opentofu.sh | sudo bash -s -- --install-method deb
+```
 
 ## 1. tofu apply (OCI 리소스)
 
