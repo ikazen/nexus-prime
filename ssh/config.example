@@ -1,0 +1,18 @@
+# tailnet 호스트 alias.
+# Tailscale MagicDNS 가 켜져 있으면 hostname 으로 자동 해결.
+# 안 켜져 있으면 HostName 을 tailnet IP 로 직접 명시.
+
+Host ops-vm
+    HostName ops-vm.<your-tailnet>.ts.net
+    User ubuntu
+    IdentityFile ~/.ssh/<your-key>
+
+Host worker-vm
+    HostName worker-vm.<your-tailnet>.ts.net
+    User ubuntu
+    IdentityFile ~/.ssh/<your-key>
+
+Host mac-server
+    HostName mac-server.<your-tailnet>.ts.net
+    User <your-user>
+    IdentityFile ~/.ssh/<your-key>
