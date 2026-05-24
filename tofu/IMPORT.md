@@ -60,10 +60,10 @@ tofu import oci_core_subnet.private <private-subnet-ocid>
 tofu import oci_core_network_security_group.ops <ops-nsg-ocid>
 tofu import oci_core_network_security_group.worker <worker-nsg-ocid>
 
-# NSG rules — id 형식: <nsg-ocid>/<rule-id>
-tofu import oci_core_network_security_group_security_rule.ops_https_tcp <ops-nsg-ocid>/<rule-id-1>
-tofu import oci_core_network_security_group_security_rule.ops_http      <ops-nsg-ocid>/<rule-id-2>
-tofu import oci_core_network_security_group_security_rule.ops_ssh       <ops-nsg-ocid>/<rule-id-3>
+# NSG rules — id 형식: networkSecurityGroups/<nsg-ocid>/securityRules/<rule-id>
+tofu import oci_core_network_security_group_security_rule.ops_https_tcp "networkSecurityGroups/<ops-nsg-ocid>/securityRules/<rule-id-1>"
+tofu import oci_core_network_security_group_security_rule.ops_http      "networkSecurityGroups/<ops-nsg-ocid>/securityRules/<rule-id-2>"
+tofu import oci_core_network_security_group_security_rule.ops_ssh       "networkSecurityGroups/<ops-nsg-ocid>/securityRules/<rule-id-3>"
 
 # Instances
 tofu import oci_core_instance.ops_vm    <ops-vm-ocid>
@@ -82,10 +82,13 @@ tofu plan
 ```
 
 **의도된 drift** (코드 vs 실제 환경):
-- `oci_core_instance.ops_vm` boot_volume_size_in_gbs: **125 → 150** (확장)
-- `oci_core_instance.worker_vm` boot_volume_size_in_gbs: **75 → 50** (축소 = OCI 가 ForceNew → 인스턴스 재생성)
+- `oci_core_instance.ops_vm` ForceNew — boot_volume_size (125→150) + metadata 후행 `\n` 차이
+- `oci_core_instance.worker_vm` ForceNew — boot_volume_size (75→50) + metadata 후행 `\n` 차이
+- `oci_core_public_ip.ops_reserved` in-place update — 인스턴스 재생성 후 새 VNIC 에 re-attach
 
-그 외 (VCN / NSG / RT / Subnet / Reserved IP 등) **차이 0** 이어야 함. 차이 있으면 코드와 실제 환경 불일치 — 코드 수정 또는 실제 환경 확인.
+`tofu plan` 출력: `2 to add, 1 to change, 2 to destroy` — 정상.
+
+그 외 (VCN / NSG / RT / Subnet 등) **차이 0** 이어야 함. 차이 있으면 코드와 실제 환경 불일치 — 코드 수정 또는 실제 환경 확인.
 
 코드 수정 이력 (import 준비 중 발견):
 - IG display_name `main-ig` → `main-igw` (OCI 실제 이름)

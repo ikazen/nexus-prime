@@ -2,7 +2,7 @@ resource "oci_core_vcn" "main" {
   compartment_id = var.compartment_ocid
   cidr_blocks    = [var.vcn_cidr]
   display_name   = "main-vcn"
-  dns_label      = "main"
+  dns_label      = "mainvcn"
 }
 
 resource "oci_core_internet_gateway" "ig" {
@@ -58,7 +58,7 @@ resource "oci_core_subnet" "public" {
   vcn_id                     = oci_core_vcn.main.id
   cidr_block                 = var.public_subnet_cidr
   display_name               = "public-subnet"
-  dns_label                  = "public"
+  dns_label                  = "pub"
   route_table_id             = oci_core_route_table.public_rt.id
   prohibit_public_ip_on_vnic = false
 }
