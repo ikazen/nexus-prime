@@ -1,0 +1,17 @@
+# OCI 인증 (API key) — OCI Console → Identity → Users → API Keys
+tenancy_ocid     = "ocid1.tenancy.oc1..<your-tenancy>"
+user_ocid        = "ocid1.user.oc1..<your-user>"
+fingerprint      = "<api-key-fingerprint>"
+private_key_path = "~/.oci/<your-key>.pem"
+region           = "<region>"
+
+# 리소스 컴파트먼트 (예: 'main' compartment) — Console → Identity → Compartments
+compartment_ocid = "ocid1.compartment.oc1..<your-compartment>"
+
+# 인스턴스 접근
+ssh_public_key  = "ssh-ed25519 AAAA... <comment>"
+my_home_ip_cidr = "<your-home-ip>/32"
+
+# 부트 볼륨 (default 유지 시 생략 가능)
+# ops_vm_boot_size    = 150
+# worker_vm_boot_size = 50
