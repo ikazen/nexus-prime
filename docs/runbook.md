@@ -78,6 +78,20 @@ colima stop && colima start --cpu 6 --memory 8
 # 설정은 ~/.colima/default/colima.yaml 저장 → LaunchAgent 다음 부팅부터 동일
 ```
 
+## Rover (인프라 시각화)
+
+ops-vm 에서 rover 컨테이너를 띄워 tailnet 내 어디서든 브라우저로 접근:
+
+```bash
+bash scripts/rover.sh
+# → http://oci-vm-ops:9000
+```
+
+종료:
+```bash
+ssh ops-vm 'docker rm -f rover'
+```
+
 ## tofu state 백업
 
 `*.tfstate` 는 gitignored. 변경 후 password manager 또는 OCI Object Storage Always Free 에 백업. 분실 시 import 재실행 가능하지만 시간 소모.
