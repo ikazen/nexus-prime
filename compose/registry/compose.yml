@@ -4,8 +4,9 @@ services:
     container_name: registry
     environment:
       REGISTRY_STORAGE_DELETE_ENABLED: "true"
-    expose:
-      - "5000"
+    ports:
+      # bootstrap 및 내부 접근용 (tailnet 전용). 일반 push/pull 은 registry.internal 사용.
+      - "${OPS_TAILNET_IP}:5000:5000"
     volumes:
       - registry-data:/var/lib/registry
     logging:

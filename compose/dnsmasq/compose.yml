@@ -1,6 +1,7 @@
 services:
   dnsmasq:
-    image: registry.internal/dnsmasq:latest
+    # DNS 구축 전이라 registry.internal 미해석 — bootstrap 주소(IP:5000) 사용
+    image: ${OPS_TAILNET_IP}:5000/dnsmasq:latest
     container_name: dnsmasq
     network_mode: host
     command:
