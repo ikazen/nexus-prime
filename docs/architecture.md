@@ -1,0 +1,78 @@
+# Architecture
+
+3 노드 분산 인프라. Tailscale 메쉬 + Caddy edge + Postgres 공유 DB + self-hosted registry.
+
+## 토폴로지
+
+```
+                          인터넷
+                            │ HTTPS  airflow.<your-domain>
+                            ▼  443/80 (TCP+UDP)
+┌──────────────────────────────────────────────────────────────┐
+│  ops-vm  (OCI public, always-on, A1.Flex 2/12 GB)            │
+│   Caddy ──► (nexus network) ──► api-server / postgres        │
+│   Postgres 16 (공유 DB)                                       │
+│   Registry :2 (tailnet IP bind, /srv/registry block volume)  │
+│   Tailscale                                                  │
+└──────────────────────────────────────────────────────────────┘
+        │ Tailscale (MagicDNS / ACL)
+┌──────────────────────────────────────────────────────────────┐
+│  worker-vm  (OCI private, always-on, A1.Flex 2/12 GB)        │
+│   인프라 컨테이너 0. Docker + airflow edge worker (별도 repo) │
+└──────────────────────────────────────────────────────────────┘
+        │ Tailscale
+┌──────────────────────────────────────────────────────────────┐
+│  mac-server  (M1, 가정 NAT, intermittent, 10-core / 32 GB)   │
+│   인프라 책임 = Colima + LaunchAgent                           │
+│   인프라 컨테이너 0. Docker (Colima) + airflow edge worker    │
+└──────────────────────────────────────────────────────────────┘
+```
+
+## 네트워크
+
+- **외부 ingress**: ops-vm 443 → Caddy → api-server:8080 (사람용 UI). 80 → ACME redirect
+- **노드 간**: Tailscale (MagicDNS, ACL 단일 사용자 기본값). 별도 NSG ingress 룰 X
+- **워커 ↔ control plane**: Tailscale 직결 `http://<ops-vm-tailnet>:8080/edge_worker/v1` (cert 불필요, edge API 공인 노출 X)
+- **SSH**: Tailscale 만 + 본인 IP /32 fallback (audit Critical 해소)
+- **nexus docker network** (L15): ops-vm 내부, caddy / postgres / registry / airflow 서비스 모두 join. 호스트 단위 객체 (worker-vm·mac-server 에는 없음)
+
+## OCI 자원
+
+| | ops-vm | worker-vm |
+|---|---|---|
+| Shape / OCPU / RAM | A1.Flex 2 / 12 GB | A1.Flex 2 / 12 GB |
+| Boot Volume | 150 GB | 50 GB |
+| Block Volume | 25 GB → `/srv/registry` | 없음 |
+| Public IP | reserved | 없음 |
+| Subnet | public | private |
+
+총 storage = 150 + 50 + 25 = **225 GB** — Always Free block storage 200 GB **초과 25 GB ≈ $0.64/월**.
+(또는 worker-vm 47 GB 로 더 줄여 200 안 — `tofu/instances.tf` 에서 선택)
+
+합산 4 OCPU + 24 GB → A1.Flex Always Free 안.
+
+## 책임 분리
+
+| 책임 | repo / 위치 |
+|---|---|
+| OCI 리소스 (VCN·NSG·instance·volume·IP) | nexus-prime `tofu/` |
+| Tailscale 노드 가입 / ACL | nexus-prime (수동, `docs/runbook.md`) |
+| 호스트 부트스트랩 (swap·Docker·unattended-upgrades) | nexus-prime `hosts/{host}/host-setup.sh` |
+| Caddy / Postgres / Registry 컨테이너 | nexus-prime `compose/{기능}/` |
+| airflow control plane (api-server·scheduler·dag-processor) | airflow-stack |
+| airflow edge worker | airflow-stack |
+| DAG / 워크로드 코드 | airflow-stack + 도메인 repo (예: lol-list) |
+| task 실행 image (registry 에 push) | 도메인 repo (예: lol-list 의 task image build) |
+
+## 결합점
+
+- **docker network 이름** = `nexus`. airflow-stack 의 compose 가 `networks: { nexus: { external: true } }` 선언
+- **postgres 접근** = 같은 nexus network 안 `postgres:5432`
+- **registry 주소** = `<ops-vm-tailnet>:5000` — airflow-stack 의 `@task.docker(image=...)` 가 참조
+
+## 외부 의존
+
+- DNS: 사용자 도메인 (외부 provider). `airflow.<your-domain>` A → ops-vm reserved IP
+- Tailscale: SaaS, MagicDNS ON
+- Let's Encrypt: Caddy 가 자동 ACME
+- (워크로드 측면) Supabase: airflow-stack 측 외부 의존
