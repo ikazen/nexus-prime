@@ -22,7 +22,7 @@ tofu apply
 tofu output    # IP / OCID 메모
 ```
 
-산출물: VCN / 서브넷 2 / NSG 2 / Gateway 3 / 인스턴스 2 (ops-vm·worker-vm) / Block Volume 1 / Reserved IP.
+산출물: VCN / 서브넷 2 / NSG 2 / Gateway 3 / 인스턴스 2 (ops-vm·worker-vm) / Reserved IP.
 
 ## 2. DNS
 
@@ -53,7 +53,6 @@ bash hosts/<host>/host-setup.sh
 ```
 
 ops-vm 추가:
-- Block Volume mount → `hosts/ops-vm/README.md` 의 "block volume mount" 절차
 - nexus network 는 `host-setup.sh` 가 이미 생성
 
 mac-server 는 macOS 라 host-setup.sh 가 아니라 `hosts/mac-server/README.md` 절차 (brew / colima / LaunchAgent).
@@ -72,7 +71,7 @@ docker compose -f compose/_hosts/ops-vm.yml --env-file compose/_hosts/ops-vm.env
 검증:
 - `docker ps` — caddy / postgres / registry 정상
 - `https://airflow.<your-domain>` 접속 (Caddy ACME 발급 직후 200 또는 502 — 502 는 airflow api-server 미가동, 정상)
-- `docker exec registry ls /var/lib/registry/docker` — block volume mount 정상
+- `docker exec registry ls /var/lib/registry/docker` — registry 정상
 
 ## 6. airflow workload
 

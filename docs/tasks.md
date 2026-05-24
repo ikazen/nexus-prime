@@ -25,7 +25,8 @@ airflow-stack 단일 repo 에서 인프라 분리 → nexus-prime 신규 repo. �
 
 ## 미래
 
-- Block Volume 25 GB 신규 (Phase 0 의 tofu 코드에 포함) — 현재 미할당, attach 시 ops-vm 셋업 진행
-- worker-vm 재생성 (75 → 50 GB) — `airflow-stack:tasks.md` Phase 9 와 합쳐 진행
+- worker-vm 재생성 (75 → 50 GB), ops-vm 확장 (125 → 150 GB) — `airflow-stack:tasks.md` Phase 9 와 합쳐 진행
 - registry retention 정책 자동화 (cron + `registry garbage-collect`)
+- 디스크 사용량 모니터링 (registry GC + alert)
 - tofu state remote backend (협업 / 다중 환경 시)
+- block volume 분리 — registry 디스크 점유가 부트 위협하면 재고

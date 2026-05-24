@@ -6,8 +6,7 @@
 #   docker compose -f compose/_hosts/ops-vm.yml --env-file compose/_hosts/ops-vm.env up -d
 #
 # 사전 조건:
-#   - docker network create nexus  (한 번만)
-#   - REGISTRY_DATA_PATH 의 호스트 경로 = block volume mount (docs/runbook.md)
+#   - docker network create nexus  (한 번만, host-setup.sh 가 처리)
 
 include:
   - path: ../caddy/compose.yml

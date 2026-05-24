@@ -8,9 +8,7 @@ services:
       # tailnet 내부 only. 공인 노출 X (이미지에 lol-list 등 private 코드 포함 가능).
       - "${OPS_TAILNET_IP}:5000:5000"
     volumes:
-      # 호스트 별도 block volume mount path (예: /srv/registry).
-      # docs/runbook.md 의 "block volume attach" 절차 참조.
-      - ${REGISTRY_DATA_PATH}:/var/lib/registry
+      - registry-data:/var/lib/registry
     logging:
       driver: json-file
       options:
@@ -19,6 +17,9 @@ services:
     networks:
       - nexus
     restart: unless-stopped
+
+volumes:
+  registry-data:
 
 networks:
   nexus:

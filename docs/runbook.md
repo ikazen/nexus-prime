@@ -11,12 +11,14 @@
 5. `bash hosts/worker-vm/host-setup.sh`
 6. airflow-stack 측 절차 — edge worker 재기동
 
-## Block Volume 확장
+## ops-vm 부트 디스크 확장
 
-1. `tofu` 에서 `size_in_gbs` 수정 (OCI 는 online resize 지원)
+1. `tofu` 에서 `boot_volume_size_in_gbs` 수정 (online resize, in-place)
 2. `tofu apply`
-3. ops-vm 안: `sudo resize2fs /dev/<device>` (또는 partition 재조정 후)
-4. `df -h /srv/registry` 확인
+3. ops-vm 안: `sudo growpart /dev/sda 1 && sudo resize2fs /dev/sda1`
+4. `df -h /` 확인
+
+registry storage 가 부트 안이라 부트 확장이 곧 registry 확장.
 
 ## Postgres 신규 DB / user 추가 (공유 DB, L4)
 

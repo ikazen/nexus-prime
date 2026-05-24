@@ -9,10 +9,10 @@
                             │ HTTPS  airflow.<your-domain>
                             ▼  443/80 (TCP+UDP)
 ┌──────────────────────────────────────────────────────────────┐
-│  ops-vm  (OCI public, always-on, A1.Flex 2/12 GB)            │
+│  ops-vm  (OCI public, always-on, A1.Flex 2/12 GB, 150 GB)    │
 │   Caddy ──► (nexus network) ──► api-server / postgres        │
 │   Postgres 16 (공유 DB)                                       │
-│   Registry :2 (tailnet IP bind, /srv/registry block volume)  │
+│   Registry :2 (tailnet IP bind, named volume on boot disk)   │
 │   Tailscale                                                  │
 └──────────────────────────────────────────────────────────────┘
         │ Tailscale (MagicDNS / ACL)
@@ -42,14 +42,12 @@
 |---|---|---|
 | Shape / OCPU / RAM | A1.Flex 2 / 12 GB | A1.Flex 2 / 12 GB |
 | Boot Volume | 150 GB | 50 GB |
-| Block Volume | 25 GB → `/srv/registry` | 없음 |
 | Public IP | reserved | 없음 |
 | Subnet | public | private |
 
-총 storage = 150 + 50 + 25 = **225 GB** — Always Free block storage 200 GB **초과 25 GB ≈ $0.64/월**.
-(또는 worker-vm 47 GB 로 더 줄여 200 안 — `tofu/instances.tf` 에서 선택)
+총 storage = 150 + 50 = **200 GB** (Always Free 한도 딱). 합산 4 OCPU + 24 GB → A1.Flex Always Free 안.
 
-합산 4 OCPU + 24 GB → A1.Flex Always Free 안.
+registry storage 도 ops-vm 부트 디스크 안 (docker named volume). 디스크 모니터링 + 주기 GC 로 관리 (`runbook.md`).
 
 ## 책임 분리
 
