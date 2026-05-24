@@ -24,14 +24,14 @@ ops-vm reserved IP 는 유지 (별도 리소스). 인스턴스 재생성 시 새
 
 ## Postgres 신규 DB / user 추가 (공유 DB, L4)
 
-```
-ssh ops-vm
-docker exec -it postgres psql -U <superuser> -c "CREATE DATABASE <newdb>;"
-docker exec -it postgres psql -U <superuser> -c "CREATE USER <newuser> WITH PASSWORD '<pw>';"
-docker exec -it postgres psql -U <superuser> -c "GRANT ALL ON DATABASE <newdb> TO <newuser>;"
-```
+서비스별 절차는 해당 서비스 repo 의 runbook 참조 (예: `airflow-stack:docs/runbook.md`).
 
-신규 서비스의 `.env` 에 `postgresql://<newuser>:<pw>@postgres:5432/<newdb>`.
+일반 명령 패턴:
+```
+docker exec -it postgres psql -U postgres -c "CREATE DATABASE <db>;"
+docker exec -it postgres psql -U postgres -c "CREATE USER <user> WITH PASSWORD '<pw>';"
+docker exec -it postgres psql -U postgres -c "GRANT ALL ON DATABASE <db> TO <user>;"
+```
 
 ## Registry GC
 
