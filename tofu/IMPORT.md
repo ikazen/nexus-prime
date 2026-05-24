@@ -94,9 +94,26 @@ tofu plan
 실제 VM 내리고 새로 배포하기로 결정한 시점에:
 
 1. `airflow-stack` 측 docker compose 정지 (`docker compose down` on ops-vm·worker-vm·mac-server)
-2. `tofu apply` — worker-vm 재생성 + ops-vm 부트 확장
-3. `worker-vm` 재셋업 (`hosts/worker-vm/host-setup.sh` + Tailscale 재가입)
+2. **capacity retry 자동화** — `./retry-apply.sh`
+   - ops-vm 먼저 `-target` retry loop → 성공 후 worker-vm `-target` retry loop → 마지막 나머지 `tofu apply`
+   - OCI A1.Flex Always Free 는 "Out of host capacity" 빈번. 기본 60 초 간격, 최대 200 회 재시도
+   - 환경변수: `SLEEP_SECONDS=30 MAX_ATTEMPTS=500 ./retry-apply.sh`
+   - Ctrl-C 로 중단 가능. 부분 성공 시 tofu state 에 반영 → 재실행 안전
+3. `worker-vm` 재셋업 (`hosts/worker-vm/host-setup.sh` + Tailscale 재가입). public IP 없으므로 DNS 변경 불필요. ops-vm 은 reserved IP 라 인스턴스 재생성돼도 IP 유지
 4. `airflow-stack` 재기동
+
+### ops-vm 부트 확장 (125 → 150) ForceNew 여부
+
+`tofu plan` 결과로 확정:
+- `~ boot_volume_size_in_gbs = 125 -> 150` (in-place online resize) → ops-vm capacity 영향 없음
+- `-/+ destroy and replace` → ops-vm 도 재생성, capacity 영향 받음. retry script 가 처리
+
+### AD fallback
+
+특정 AD 에서 capacity 안 풀리면 다른 AD 시도:
+1. `main.tf` 의 `local.availability_domain = ...availability_domains[0].name` 에서 인덱스 변경 (`[1]` 또는 `[2]`)
+2. `tofu plan` 으로 변경 확인 (인스턴스 ForceNew 표시 — AD 변경 = 재생성)
+3. `./retry-apply.sh` 재실행
 
 ## state 백업
 
