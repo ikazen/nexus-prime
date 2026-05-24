@@ -52,4 +52,18 @@ resource "oci_core_network_security_group" "worker" {
   vcn_id         = oci_core_vcn.main.id
   display_name   = "worker-nsg"
 }
-# worker-nsg ingress 룰 없음 — outbound 만
+
+# ops-vm → worker-vm SSH (초기 설정 / Tailscale 재설치용)
+resource "oci_core_network_security_group_security_rule" "worker_ssh_from_vcn" {
+  network_security_group_id = oci_core_network_security_group.worker.id
+  direction                 = "INGRESS"
+  protocol                  = "6"
+  source                    = var.vcn_cidr
+  source_type               = "CIDR_BLOCK"
+  tcp_options {
+    destination_port_range {
+      min = 22
+      max = 22
+    }
+  }
+}
