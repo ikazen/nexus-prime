@@ -62,22 +62,22 @@ docker push oci-vm-ops:5000/dnsmasq:latest
 
 ```bash
 # Linux (ops-vm, worker-vm)
-echo '{"insecure-registries": ["oci-vm-ops:5000"]}' | sudo tee /etc/docker/daemon.json
+echo '{"insecure-registries": ["registry.internal:5000"]}' | sudo tee /etc/docker/daemon.json
 sudo systemctl restart docker
 
-# mac-server (colima)
+# mac-server (colima) — colima VM 안에서는 MagicDNS 미지원, IP 직접 사용
 # ~/.colima/default/colima.yaml 에 아래 추가 후 colima restart
 # docker:
 #   insecure-registries:
-#     - oci-vm-ops:5000
+#     - <OPS_TAILNET_IP>:5000
 ```
 
 기본 사용:
 
 ```bash
-docker tag <image> oci-vm-ops:5000/<name>:<tag>
-docker push oci-vm-ops:5000/<name>:<tag>
-docker pull oci-vm-ops:5000/<name>:<tag>
+docker tag <image> registry.internal:5000/<name>:<tag>
+docker push registry.internal:5000/<name>:<tag>
+docker pull registry.internal:5000/<name>:<tag>
 ```
 
 ## Registry GC

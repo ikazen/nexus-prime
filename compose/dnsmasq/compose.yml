@@ -1,6 +1,6 @@
 services:
   dnsmasq:
-    image: oci-vm-ops:5000/dnsmasq:latest
+    image: registry.internal:5000/dnsmasq:latest
     container_name: dnsmasq
     network_mode: host
     command:
