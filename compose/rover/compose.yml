@@ -1,6 +1,6 @@
 services:
   rover:
-    image: registry.internal:5000/rover:arm64
+    image: registry.internal/rover:arm64
     container_name: rover
     expose:
       - "9000"

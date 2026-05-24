@@ -1,6 +1,6 @@
 services:
   dnsmasq:
-    image: registry.internal:5000/dnsmasq:latest
+    image: registry.internal/dnsmasq:latest
     container_name: dnsmasq
     network_mode: host
     command:

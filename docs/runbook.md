@@ -58,14 +58,16 @@ docker push oci-vm-ops:5000/dnsmasq:latest
 
 주소: `oci-vm-ops:5000` (tailnet 전용 HTTP — 공인 노출 없음).
 
+주소: `registry.internal` (Caddy 경유, tailnet 전용).
+
 신규 호스트에서 처음 쓸 때 insecure registry 등록 필요 (한 번만):
 
 ```bash
 # Linux (ops-vm, worker-vm)
-echo '{"insecure-registries": ["registry.internal:5000"]}' | sudo tee /etc/docker/daemon.json
+echo '{"insecure-registries": ["registry.internal"]}' | sudo tee /etc/docker/daemon.json
 sudo systemctl restart docker
 
-# mac-server (colima) — colima VM 안에서는 MagicDNS 미지원, IP 직접 사용
+# mac-server (colima) — colima VM 내부에서 .internal DNS 미지원, IP:5000 직접 사용
 # ~/.colima/default/colima.yaml 에 아래 추가 후 colima restart
 # docker:
 #   insecure-registries:
@@ -75,9 +77,15 @@ sudo systemctl restart docker
 기본 사용:
 
 ```bash
-docker tag <image> registry.internal:5000/<name>:<tag>
-docker push registry.internal:5000/<name>:<tag>
-docker pull registry.internal:5000/<name>:<tag>
+docker tag <image> registry.internal/<name>:<tag>
+docker push registry.internal/<name>:<tag>
+docker pull registry.internal/<name>:<tag>
+```
+
+**bootstrap 예외 (dnsmasq 최초 배포 시):** DNS가 아직 없어 `registry.internal` 미해석. 이 경우에만 `<OPS_TAILNET_IP>:5000` 직접 사용:
+```bash
+docker build -t <OPS_TAILNET_IP>:5000/dnsmasq:latest .
+docker push <OPS_TAILNET_IP>:5000/dnsmasq:latest
 ```
 
 ## Registry GC
