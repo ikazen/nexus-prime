@@ -12,6 +12,5 @@ include:
   - path: ../caddy/compose.yml
   - path: ../postgres/compose.yml
   - path: ../registry/compose.yml
-  - path: ../rover/compose.yml
   - path: ../registry-ui/compose.yml
   - path: ../dnsmasq/compose.yml

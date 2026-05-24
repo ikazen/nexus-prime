@@ -6,10 +6,6 @@ http://registry-ui.internal {
     reverse_proxy registry-ui:80
 }
 
-http://rover.internal {
-    reverse_proxy rover:9000
-}
-
 {$AIRFLOW_DOMAIN} {
     header {
         Strict-Transport-Security "max-age=31536000"

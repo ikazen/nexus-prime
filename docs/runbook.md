@@ -133,30 +133,6 @@ colima stop && colima start --cpu 6 --memory 8
 # 설정은 ~/.colima/default/colima.yaml 저장 → LaunchAgent 다음 부팅부터 동일
 ```
 
-## Rover (인프라 시각화)
-
-상시 서비스 (`compose/rover/`). tailnet 내 어디서든 `http://oci-vm-ops:9000`.
-
-tofu 변경 후 plan 갱신:
-
-```bash
-bash scripts/rover.sh
-```
-
-### rover 이미지 재빌드 (ops-vm 재설치 후 registry 소실 시)
-
-공식 이미지가 amd64 전용이라 ops-vm(ARM64)용으로 직접 빌드. ops-vm 위에서 실행:
-
-```bash
-git clone --depth=1 https://github.com/im2nguyen/rover.git /tmp/rover
-cp ~/nexus-prime/compose/rover/Dockerfile /tmp/rover/Dockerfile
-cd /tmp/rover
-docker build -t oci-vm-ops:5000/rover:arm64 .
-docker push oci-vm-ops:5000/rover:arm64
-docker compose -f ~/nexus-prime/compose/_hosts/ops-vm.yml \
-  --env-file ~/nexus-prime/compose/_hosts/ops-vm.env up -d rover
-```
-
 ## tofu state 백업
 
 `*.tfstate` 는 gitignored. 변경 후 password manager 또는 OCI Object Storage Always Free 에 백업. 분실 시 import 재실행 가능하지만 시간 소모.
