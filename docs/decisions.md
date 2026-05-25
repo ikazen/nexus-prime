@@ -32,6 +32,62 @@
 | R1 | Auth manager (Caddy 뒤 airflow `SimpleAuthManager`) | 다중 사용자 / RBAC, UI 노출 표면 확대 | `FabAuthManager` (airflow-stack 측 결정) |
 | R2 | registry 외부 노출 X (tailnet IP bind only) | 외부 CI / 다른 노드에서 push 필요 | Caddy 뒤 `registry.<your-domain>` + basic auth |
 | R3 | tofu state = 로컬 (`.tfstate` gitignore + password manager 백업) | 다중 운영자 / 협업 | OCI Object Storage backend |
+| R4 | 모니터링 미도입. 가시성 = 호스트 ssh + `docker ps` + `tofu plan` + `tailscale status` (audit C+) | 장애 디버깅 빈도 증가 / airflow DAG 성능 추적 필요 / 운영 routine 정착 | Grafana + Prometheus + node_exporter + statsd_exporter (+ cAdvisor 옵션). 상세 ↓ |
+
+## R4 보충 — 모니터링 스택 도입 계획
+
+도입 시점은 R4 트리거 발생 후. 결정만 먼저 못 박아 둠.
+
+### 스택 선택 — Grafana + Prometheus + node_exporter
+- 실무 표준 (k8s 환경 포함) — PromQL / alert rule / Grafana dashboard / statsd_exporter mapping 학습 ROI 최대
+- 대안 (Beszel / Netdata) 은 가볍지만 단발성. 실무 연결성 우선
+
+### 자원 부담 추정 (ops-vm 12GB / 150GB 안)
+- RAM: prometheus ~400-600MB + grafana ~200MB + statsd_exporter ~30MB + cAdvisor ~100MB + node_exporter ~20MB = **~700MB-1GB**
+- Disk: 30s scrape × 2주 × active series ~7-10K (3 노드 node_exporter + airflow statsd + cAdvisor) ≈ **2-3GB**
+- 현재 ops-vm 사용 추정 ~3-4GB → 추가 1GB 여유 충분
+
+### 운영 파라미터
+- scrape interval **30s** (15s 면 series/storage 2배, 학습용엔 해상도 의미 적음)
+- retention **14d** (`--storage.tsdb.retention.time=14d`)
+- WAL 압축 ON (`--storage.tsdb.wal-compression`) — ARM A1.Flex disk IO 튐 완화
+
+### 디렉토리 패턴 — `compose/monitoring/` 통합 (L17 예외)
+L17 의 "기능별 1 디렉토리" 패턴에서 monitoring 은 stack 단위. 이유:
+- `prometheus.yml` 의 scrape target (statsd_exporter, cadvisor, node_exporter) 이 같은 stack 안에 있어야 한 파일에서 관리
+- 함께 떴다 함께 죽는 의미 단위 (grafana 만 살아있고 prometheus 죽으면 dashboard = 회색)
+- 실무 표준 (kube-prometheus-stack) 도 단일 unit
+- 부분 재기동은 `docker compose ... restart grafana` 로 컨테이너 단위 제어 가능
+
+### 토폴로지
+```
+ops-vm (nexus network)
+  ├── prometheus      ← node_exporter × 3, statsd_exporter, cadvisor 스크랩
+  ├── grafana         ← prometheus datasource
+  ├── statsd_exporter ← airflow scheduler/api-server emit
+  ├── cadvisor (옵션)  ← docker container 메트릭
+  └── node_exporter
+
+worker-vm: node_exporter (host network, Tailscale IP bind)
+mac-server: node_exporter (host network, Tailscale IP bind) — intermittent, up==0 alert 제외
+```
+
+### 노출
+- `grafana.<your-domain>` 공인 (Caddy reverse_proxy, Grafana 자체 로그인 / 또는 basic auth)
+- `prometheus.internal` tailnet 전용 (dnsmasq + Caddy `*.internal` 패턴)
+- node_exporter scrape = tailnet IP 직결, NSG 룰 추가 X
+
+### airflow 연동
+- airflow-stack `.env` 에 `AIRFLOW__METRICS__STATSD_ON=True`, `STATSD_HOST=statsd-exporter`, `STATSD_PORT=9125`
+- DAG run 시간, task 성공/실패율, scheduler heartbeat latency, executor queue depth 수집
+- Grafana 공식 dashboard (id: 16365 등) 활용
+
+### 영향받는 다른 문서 (도입 시점에 갱신)
+- `docs/architecture.md` — monitoring stack 추가, 토폴로지 도식 업데이트
+- `docs/runbook.md` — Grafana 로그인 / Prometheus retention 조정 / dashboard 추가 절차
+- `docs/setup.md` — 신규 셋업 흐름에 `compose/monitoring/` up 단계 추가
+- `compose/caddy/Caddyfile` — `grafana.<your-domain>` + `prometheus.internal` 라우팅
+- `hosts/{worker-vm,mac-server}/host-setup.sh` — node_exporter systemd / launchd 유닛
 
 ## airflow-stack 과의 cross-reference
 
