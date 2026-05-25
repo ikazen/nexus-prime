@@ -89,6 +89,80 @@ mac-server: node_exporter (host network, Tailscale IP bind) — intermittent, up
 - `compose/caddy/Caddyfile` — `grafana.<your-domain>` + `prometheus.internal` 라우팅
 - `hosts/{worker-vm,mac-server}/host-setup.sh` — node_exporter systemd / launchd 유닛
 
+---
+
+## R4 후속 — 관측성 stack 완성 (Tier 1)
+
+R4 monitoring 정착 후 자연 확장. `compose/monitoring/` 안에 통합 (같은 stack 단위, audit gap 직접 해소).
+
+### Loki + Promtail — 로그 집계
+- **역할**: 모든 docker container stdout → Loki → Grafana 에서 metrics 와 같은 UI 로 query
+- **자원**: Loki ~200MB, Promtail ~50MB
+- **해소 audit gap**: "로그 집계 없음 — incident 시 호스트 ssh 후 docker logs"
+- **구성**: Loki 는 ops-vm, Promtail 은 각 호스트 (3 노드 모두). docker log driver = `json-file` 유지하고 Promtail 이 `/var/lib/docker/containers/*/*-json.log` tail
+- **storage**: 로컬 filesystem (단일 노드) → 추후 MinIO backend 로 이전 가능 (학습 가치)
+- **retention**: 7d (audit gap 디버깅 목적, metrics 보다 짧게)
+
+### Alertmanager — alert 라우팅
+- **역할**: Prometheus alert rule fire → Slack/Discord/email 으로 라우팅
+- **자원**: ~30MB
+- **해소**: metrics 만 있고 알림 없으면 의미 절반
+- **구성**: ops-vm, `compose/monitoring/` 안. Prometheus 가 `--alertmanager.url` 로 연결
+- **rule 예시**: postgres down, registry disk > 80%, airflow scheduler heartbeat lag > 1m, tailscale node up==0 (mac 제외)
+- **수신 채널**: Discord webhook 추천 (가정 환경 학습용, 무료)
+
+### oauth2-proxy — `*.internal` SSO
+- **역할**: 현재 무인증인 `registry-ui.internal`, `prometheus.internal`, (추가) `dbt-docs.internal`, `minio.internal` 등에 인증 layer
+- **자원**: ~50MB (oauth2-proxy 권장. Authentik 은 ~500MB+ self-hosted IdP 라 오버스펙)
+- **해소 audit gap**: "internal-only 서비스 인증 layer 0"
+- **provider**: GitHub OAuth (학습용 무료, 본인 계정만 allow)
+- **Caddy 통합**: `forward_auth oauth2-proxy:4180` 패턴. internal 라우팅 전부 한 줄로 보호
+
+### 도입 순서 (R4 직후)
+1. Alertmanager (Prometheus 동시 구성, 가장 작음)
+2. Loki + Promtail (로그도 함께 봐야 의미)
+3. oauth2-proxy (사용자 1 명이라도 기본 위생, internal 표면 보호)
+
+---
+
+## R5 — data 인프라 확장 (Tier 2 일부)
+
+회사 data팀 표준 도구 학습 목적. 관측성 stack 완성 후 단계적 도입.
+
+### dbt-core — Airflow worker 안 통합
+- **역할**: ELT 의 T. Postgres 안 raw → staging → marts 모델링. `SELECT` = 모델, `{{ ref(...) }}` 가 자동 dependency
+- **자원**: Python 패키지 ~50MB. **별도 컨테이너 X** — airflow worker image 에 `pip install dbt-core dbt-postgres`
+- **Airflow 통합**: **Cosmos** (Astronomer OSS) 권장 — dbt model 1 개 = Airflow task 1 개로 자동 펼침. lineage 가 Airflow UI 에 그대로
+- **storage**: Postgres 16 (공유 DB, L4). 신규 schema `raw`, `staging`, `marts` 분리
+- **dbt-docs**: `dbt docs generate` 후 정적 HTML → Caddy `dbt-docs.internal` 서빙 (oauth2-proxy 보호)
+- **CI**: airflow-stack repo 에 `dbt-project/` 추가, PR 시 `dbt compile && dbt test` 실행
+- **학습 가치**: SQL + git + jinja + DAG 사고법 + lineage — data팀 면접 필수
+- **책임**: airflow-stack repo (인프라 측은 dbt-docs hosting 만)
+
+### MinIO — mac-server 호스팅
+- **역할**: S3 호환 object storage. data lake (parquet), dbt artifact, Loki/Tempo backend, airflow log archive, 일반 파일 저장 등 다용도
+- **자원**: ~300MB RAM. disk = mac SSD 본인 결정
+- **호스팅 = mac-server** (스토리지 여유, OCI boot disk 200GB 절약). 단 mac intermittent → 영구 데이터 보관 X, 학습용/cache 용
+- **mac-server 의 첫 인프라 컨테이너** — `compose/_hosts/mac-server.yml` 신설 필요 (현재 비어있음)
+- **접근**:
+  - airflow worker (ops-vm) → `http://<mac-tailnet>:9000` 직결
+  - 콘솔 UI → `minio.internal` Caddy reverse_proxy (mac-server tailnet IP), oauth2-proxy 보호
+- **bucket 초기**: `raw-data`, `dbt-artifacts`, `loki-chunks` (이전 시), `airflow-logs`
+- **신뢰성**: mac down 시 MinIO 도 down → airflow task 가 MinIO 의존하면 같이 실패. 학습용 OK
+- **백업 정책**: 없음 (L7). 영구 데이터는 Supabase / 외부
+
+### Tier 2 나머지 (Metabase / Redpanda 등) 는 트리거 발생 시 R5 확장
+- Metabase — BI dashboard 가 필요해질 때 (dbt marts 위에)
+- Redpanda — streaming 학습 / event ingestion 필요할 때
+- 둘 다 ops-vm 추가 ~500MB-1GB → R4 후속 capacity 재분배 (R6) 와 함께 트리거
+
+### 영향받는 다른 문서 (도입 시점에 갱신)
+- `docs/architecture.md` — mac-server 가 인프라 컨테이너 보유, MinIO 토폴로지 추가
+- `docs/runbook.md` — MinIO bucket 생성, dbt-docs 빌드/배포, dbt model 추가 워크플로
+- `compose/_hosts/mac-server.yml` (신설), `compose/minio/` (신설)
+- `compose/caddy/Caddyfile` — `minio.internal`, `dbt-docs.internal` 라우팅 (oauth2-proxy `forward_auth`)
+- airflow-stack repo — dbt-project, Cosmos 통합, MinIO connection
+
 ## airflow-stack 과의 cross-reference
 
 - airflow workload 결정 (Airflow 3.2 / Edge Executor / `@task.docker` 등) = `airflow-stack:docs/decisions.md`
