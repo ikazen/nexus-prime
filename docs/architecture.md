@@ -5,29 +5,33 @@
 ## 토폴로지
 
 ```
-                          인터넷
-                            │ HTTPS  airflow.<your-domain>  grafana.<your-domain>
-                            ▼  443/80 (TCP+UDP)
+                        인터넷
+                           │  HTTPS 443/80 — airflow.<your-domain>, grafana.<your-domain>
+                           ▼
 ┌──────────────────────────────────────────────────────────────────┐
-│  ops-vm  (OCI public, always-on, A1.Flex 2/12 GB, 150 GB)        │
-│   Caddy ──► (nexus network) ──► api-server / postgres            │
-│   Postgres 16 (공유 DB)                                           │
-│   Registry :2 (tailnet IP bind, named volume on boot disk)       │
-│   Prometheus + Grafana + statsd_exporter + cAdvisor              │
-│   node_exporter (ops-vm 호스트 메트릭)                            │
-│   Tailscale                                                      │
-└──────────────────────────────────────────────────────────────────┘
-        │ Tailscale (MagicDNS / ACL)
-        │ Prometheus ──► node_exporter:9100 (tailnet 직결)
-┌──────────────────────────────────────────────────────────────────┐
-│  worker-vm  (OCI private, always-on, A1.Flex 2/12 GB)            │
-│   node_exporter (systemd, :9100). airflow edge worker (별도 repo)│
-└──────────────────────────────────────────────────────────────────┘
-        │ Tailscale
-        │ Prometheus ──► node_exporter:9100 (tailnet 직결, intermittent)
-┌──────────────────────────────────────────────────────────────────┐
-│  mac-server  (M1, 가정 NAT, intermittent, 10-core / 32 GB)       │
-│   node_exporter (launchd, :9100). Docker (Colima) + airflow edge │
+│  ops-vm  (OCI A1.Flex 2/12 GB, 150 GB boot, public IP)          │
+├──────────────────────────────────────────────────────────────────┤
+│  Caddy        ──► api-server:8080, grafana:3000                  │
+│  Postgres 16    shared DB                                        │
+│  Registry       tailnet IP bind, named volume                    │
+│  Prometheus / Grafana / Alertmanager / Loki / Promtail           │
+│  statsd_exporter / cAdvisor / node_exporter                      │
+└────────────────────┬─────────────────────────────────────────────┘
+                     │ Tailscale (MagicDNS / ACL)
+                     │ Prometheus ──► node_exporter:9100 (tailnet)
+┌────────────────────┴─────────────────────────────────────────────┐
+│  worker-vm  (OCI A1.Flex 2/12 GB, 50 GB boot, private)          │
+├──────────────────────────────────────────────────────────────────┤
+│  node_exporter :9100 (systemd)    Promtail (systemd)             │
+│  airflow edge worker  (airflow-stack repo)                       │
+└────────────────────┬─────────────────────────────────────────────┘
+                     │ Tailscale
+                     │ Prometheus ──► node_exporter:9100 (intermittent)
+┌────────────────────┴─────────────────────────────────────────────┐
+│  mac-server  (M1, home NAT, intermittent, 10-core / 32 GB)       │
+├──────────────────────────────────────────────────────────────────┤
+│  node_exporter :9100 (launchd)                                   │
+│  Docker (Colima)    airflow edge worker  (airflow-stack repo)    │
 └──────────────────────────────────────────────────────────────────┘
 ```
 
