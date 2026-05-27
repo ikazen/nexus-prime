@@ -96,7 +96,20 @@ ops-vm 에서 monitoring 스택 기동 (`compose/_hosts/ops-vm.env` 에 R4 변�
 docker compose -f compose/_hosts/ops-vm.yml --env-file compose/_hosts/ops-vm.env up -d
 ```
 
-`https://grafana.<your-domain>` 접속 → admin / `GRAFANA_ADMIN_PASSWORD` 로그인 → Prometheus datasource 추가 (`http://prometheus:9090`).
+Grafana datasource 등록 (API):
+```bash
+# Prometheus
+curl -s -X POST "https://grafana.<your-domain>/api/datasources" \
+  -u "admin:<GRAFANA_ADMIN_PASSWORD>" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Prometheus","type":"prometheus","url":"http://prometheus:9090","access":"proxy","isDefault":true}'
+
+# Loki
+curl -s -X POST "https://grafana.<your-domain>/api/datasources" \
+  -u "admin:<GRAFANA_ADMIN_PASSWORD>" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Loki","type":"loki","url":"http://loki:3100","access":"proxy"}'
+```
 
 ## 7. airflow workload
 
