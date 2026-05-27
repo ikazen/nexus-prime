@@ -85,18 +85,55 @@ docker compose -f compose/_hosts/ops-vm.yml --env-file compose/_hosts/ops-vm.env
 
 ## 6. monitoring (R4)
 
-worker-vm / mac-server 에서 node_exporter 설치:
+**ops-vm.env 에 R4 변수 추가:**
 ```
-# worker-vm: host-setup.sh 가 자동 설치 (node_exporter systemd)
-# mac-server: hosts/mac-server/README.md 의 node_exporter 절차 참조
+GRAFANA_DOMAIN=grafana.<your-domain>
+GRAFANA_ADMIN_PASSWORD=<strong-password>
+WORKER_TAILNET_IP=<worker-vm tailnet IP>
+MAC_TAILNET_IP=<mac-server tailnet IP>
 ```
 
-ops-vm 에서 monitoring 스택 기동 (`compose/_hosts/ops-vm.env` 에 R4 변수 입력 후):
+**DNS:** `grafana.<your-domain>` A → ops-vm reserved IP.
+
+**node_exporter 설치:**
+- worker-vm: `host-setup.sh` 가 자동 설치 (node_exporter + promtail 바이너리)
+- mac-server: `hosts/mac-server/README.md` 의 node_exporter 절차 참조
+
+**worker-vm promtail 설정 (host-setup.sh 실행 후):**
+```bash
+sudo mkdir -p /etc/promtail
+sudo tee /etc/promtail/promtail.yml > /dev/null <<'EOF'
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+positions:
+  filename: /tmp/promtail-positions.yaml
+clients:
+  - url: http://<OPS_TAILNET_IP>:3100/loki/api/v1/push
+scrape_configs:
+  - job_name: docker
+    static_configs:
+      - targets: [localhost]
+        labels:
+          host: worker-vm
+          __path__: /var/lib/docker/containers/*/*-json.log
+    pipeline_stages:
+      - json:
+          expressions: {output: log, stream: stream}
+      - labels:
+          stream:
+      - output:
+          source: output
+EOF
+sudo systemctl enable --now promtail
 ```
+
+**ops-vm 모니터링 스택 기동:**
+```bash
 docker compose -f compose/_hosts/ops-vm.yml --env-file compose/_hosts/ops-vm.env up -d
 ```
 
-Grafana datasource 등록 (API):
+**Grafana datasource 등록 (API):**
 ```bash
 # Prometheus
 curl -s -X POST "https://grafana.<your-domain>/api/datasources" \
@@ -109,6 +146,29 @@ curl -s -X POST "https://grafana.<your-domain>/api/datasources" \
   -u "admin:<GRAFANA_ADMIN_PASSWORD>" \
   -H "Content-Type: application/json" \
   -d '{"name":"Loki","type":"loki","url":"http://loki:3100","access":"proxy"}'
+```
+
+**Grafana 대시보드 import (API):**
+```bash
+import_dashboard() {
+  local id=$1
+  curl -s "https://grafana.com/api/dashboards/${id}/revisions/latest/download" -o /tmp/ds_${id}.json
+  python3 - <<EOF
+import json, urllib.request, base64
+d = json.load(open("/tmp/ds_${id}.json")); d.pop("id", None)
+payload = json.dumps({"dashboard": d, "overwrite": True, "folderId": 0,
+  "inputs": [{"name":"DS_PROMETHEUS","type":"datasource","pluginId":"prometheus","value":"Prometheus"}]}).encode()
+headers = {"Content-Type":"application/json",
+  "Authorization":"Basic "+base64.b64encode(b"admin:<GRAFANA_ADMIN_PASSWORD>").decode()}
+req = urllib.request.Request("https://grafana.<your-domain>/api/dashboards/import",
+  data=payload, headers=headers, method="POST")
+r = json.load(urllib.request.urlopen(req))
+print(r.get("status"), r.get("title"), r.get("importedUrl",""))
+EOF
+}
+
+import_dashboard 1860   # Node Exporter Full (호스트 메트릭)
+import_dashboard 14282  # cAdvisor Exporter (컨테이너 메트릭)
 ```
 
 ## 7. airflow workload

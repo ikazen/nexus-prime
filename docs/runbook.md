@@ -93,6 +93,26 @@ docker exec registry registry garbage-collect /etc/docker/registry/config.yml
 
 retention 정책 (예: keep last 10 tags) 은 별도 스크립트 — 필요 시 추가.
 
+## Monitoring
+
+**Prometheus 타겟 확인:**
+```bash
+docker exec prometheus wget -qO- 'http://localhost:9090/api/v1/targets' | \
+  python3 -c "import json,sys; [print(t['labels'].get('job'), t['health']) for t in json.load(sys.stdin)['data']['activeTargets']]"
+```
+
+**Grafana admin 비밀번호 재설정:**
+```bash
+docker exec grafana grafana cli admin reset-admin-password '<new-password>'
+```
+
+**Grafana 대시보드 재import** (`setup.md` 의 `import_dashboard` 함수 참조).
+
+**worker-vm promtail 재시작:**
+```bash
+ssh worker-vm sudo systemctl restart promtail
+```
+
 ## Caddy LE 인증서 갱신
 
 자동 (Caddy 가 만료 30 일 전 갱신). 검증:
