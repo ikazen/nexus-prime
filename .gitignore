@@ -25,3 +25,6 @@ Thumbs.db
 
 # secrets backup
 secrets-backup.md
+
+# monitoring — Discord webhook URL 포함, example 만 commit
+compose/monitoring/alertmanager.yml

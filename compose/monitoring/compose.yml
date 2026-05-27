@@ -10,6 +10,7 @@ services:
       - --web.enable-lifecycle
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./alert.rules.yml:/etc/prometheus/alert.rules.yml:ro
       - prometheus-data:/prometheus
     # worker-vm / mac-server 의 node_exporter 는 tailnet IP 직결 — MagicDNS 없이 hostname 해석
     extra_hosts:
@@ -67,9 +68,48 @@ services:
       - nexus
     restart: unless-stopped
 
+  alertmanager:
+    image: prom/alertmanager:v0.27.0
+    container_name: alertmanager
+    command:
+      - --config.file=/etc/alertmanager/alertmanager.yml
+      - --storage.path=/alertmanager
+    volumes:
+      - ./alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+    networks:
+      - nexus
+    restart: unless-stopped
+
+  loki:
+    image: grafana/loki:3.2.0
+    container_name: loki
+    command: -config.file=/etc/loki/loki.yml
+    ports:
+      # 원격 노드(worker-vm/mac-server) Promtail 수신용 — tailnet IP 에만 bind
+      - "${OPS_TAILNET_IP}:3100:3100"
+    volumes:
+      - ./loki.yml:/etc/loki/loki.yml:ro
+      - loki-data:/loki
+    networks:
+      - nexus
+    restart: unless-stopped
+
+  promtail:
+    image: grafana/promtail:3.2.0
+    container_name: promtail
+    command:
+      - -config.file=/etc/promtail/promtail.yml
+    volumes:
+      - ./promtail-ops.yml:/etc/promtail/promtail.yml:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+    networks:
+      - nexus
+    restart: unless-stopped
+
 volumes:
   prometheus-data:
   grafana-data:
+  loki-data:
 
 networks:
   nexus:

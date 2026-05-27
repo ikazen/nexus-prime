@@ -1,0 +1,38 @@
+groups:
+  - name: infra
+    rules:
+      # mac-server 는 intermittent — node scrape 제외
+      - alert: NodeDown
+        expr: up{job=~"node_.*", job!="node_mac_server"} == 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.host }} node_exporter 응답 없음"
+
+      - alert: ServiceDown
+        expr: up{job=~"cadvisor|statsd"} == 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.job }} 응답 없음"
+
+      - alert: DiskSpaceLow
+        expr: >
+          node_filesystem_avail_bytes{mountpoint="/", job="node_ops_vm"}
+          / node_filesystem_size_bytes{mountpoint="/", job="node_ops_vm"} < 0.2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "ops-vm 디스크 여유 20% 미만 (registry 또는 로그 정리 필요)"
+
+      - alert: MemoryLow
+        expr: >
+          node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes < 0.1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.host }} 메모리 여유 10% 미만"
