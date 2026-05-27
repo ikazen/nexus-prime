@@ -83,11 +83,26 @@ docker compose -f compose/_hosts/ops-vm.yml --env-file compose/_hosts/ops-vm.env
 - `https://airflow.<your-domain>` 접속 (Caddy ACME 발급 직후 200 또는 502 — 502 는 airflow api-server 미가동, 정상)
 - `docker exec registry ls /var/lib/registry/docker` — registry 정상
 
-## 6. airflow workload
+## 6. monitoring (R4)
+
+worker-vm / mac-server 에서 node_exporter 설치:
+```
+# worker-vm: host-setup.sh 가 자동 설치 (node_exporter systemd)
+# mac-server: hosts/mac-server/README.md 의 node_exporter 절차 참조
+```
+
+ops-vm 에서 monitoring 스택 기동 (`compose/_hosts/ops-vm.env` 에 R4 변수 입력 후):
+```
+docker compose -f compose/_hosts/ops-vm.yml --env-file compose/_hosts/ops-vm.env up -d
+```
+
+`https://grafana.<your-domain>` 접속 → admin / `GRAFANA_ADMIN_PASSWORD` 로그인 → Prometheus datasource 추가 (`http://prometheus:9090`).
+
+## 7. airflow workload
 
 별도 repo. `airflow-stack:docs/setup.md` 참조.
 
-## 7. secrets
+## 8. secrets
 
 `.env` 는 어디서도 git commit 금지. 실제 값은 password manager / secrets vault.
 

@@ -36,6 +36,17 @@ launchctl unload ~/Library/LaunchAgents/local.airflow.colima.plist
 
 macOS launchd 가 `${HOME}` 자동 보간 안 함. 동작 안 하면 절대경로로 수정 (`/Users/<your-user>/Library/Logs/...`). 사용자 home 경로는 git 에 안 박힘 — 로컬 mac 의 plist 만 편집.
 
+## node_exporter (monitoring 스택 R4)
+
+```
+brew install node_exporter
+
+cp hosts/mac-server/launchd/local.node_exporter.plist ~/Library/LaunchAgents/
+launchctl load ~/Library/LaunchAgents/local.node_exporter.plist
+```
+
+plist 의 `${HOME}` 보간 문제 발생 시 절대경로로 수정 (`/Users/<your-user>/Library/Logs/...`).
+
 ## SSH
 
 `ssh/config.example` 참조.

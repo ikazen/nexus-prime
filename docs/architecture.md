@@ -6,26 +6,29 @@
 
 ```
                           인터넷
-                            │ HTTPS  airflow.<your-domain>
+                            │ HTTPS  airflow.<your-domain>  grafana.<your-domain>
                             ▼  443/80 (TCP+UDP)
-┌──────────────────────────────────────────────────────────────┐
-│  ops-vm  (OCI public, always-on, A1.Flex 2/12 GB, 150 GB)    │
-│   Caddy ──► (nexus network) ──► api-server / postgres        │
-│   Postgres 16 (공유 DB)                                       │
-│   Registry :2 (tailnet IP bind, named volume on boot disk)   │
-│   Tailscale                                                  │
-└──────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────┐
+│  ops-vm  (OCI public, always-on, A1.Flex 2/12 GB, 150 GB)        │
+│   Caddy ──► (nexus network) ──► api-server / postgres            │
+│   Postgres 16 (공유 DB)                                           │
+│   Registry :2 (tailnet IP bind, named volume on boot disk)       │
+│   Prometheus + Grafana + statsd_exporter + cAdvisor              │
+│   node_exporter (ops-vm 호스트 메트릭)                            │
+│   Tailscale                                                      │
+└──────────────────────────────────────────────────────────────────┘
         │ Tailscale (MagicDNS / ACL)
-┌──────────────────────────────────────────────────────────────┐
-│  worker-vm  (OCI private, always-on, A1.Flex 2/12 GB)        │
-│   인프라 컨테이너 0. Docker + airflow edge worker (별도 repo) │
-└──────────────────────────────────────────────────────────────┘
+        │ Prometheus ──► node_exporter:9100 (tailnet 직결)
+┌──────────────────────────────────────────────────────────────────┐
+│  worker-vm  (OCI private, always-on, A1.Flex 2/12 GB)            │
+│   node_exporter (systemd, :9100). airflow edge worker (별도 repo)│
+└──────────────────────────────────────────────────────────────────┘
         │ Tailscale
-┌──────────────────────────────────────────────────────────────┐
-│  mac-server  (M1, 가정 NAT, intermittent, 10-core / 32 GB)   │
-│   인프라 책임 = Colima + LaunchAgent                           │
-│   인프라 컨테이너 0. Docker (Colima) + airflow edge worker    │
-└──────────────────────────────────────────────────────────────┘
+        │ Prometheus ──► node_exporter:9100 (tailnet 직결, intermittent)
+┌──────────────────────────────────────────────────────────────────┐
+│  mac-server  (M1, 가정 NAT, intermittent, 10-core / 32 GB)       │
+│   node_exporter (launchd, :9100). Docker (Colima) + airflow edge │
+└──────────────────────────────────────────────────────────────────┘
 ```
 
 ## 네트워크
@@ -34,7 +37,8 @@
 - **노드 간**: Tailscale (MagicDNS, ACL 단일 사용자 기본값). 별도 NSG ingress 룰 X
 - **워커 ↔ control plane**: Tailscale 직결 `http://<ops-vm-tailnet>:8080/edge_worker/v1` (cert 불필요, edge API 공인 노출 X)
 - **SSH**: Tailscale 만 + 본인 IP /32 fallback (audit Critical 해소)
-- **nexus docker network** (L15): ops-vm 내부, caddy / postgres / registry / airflow 서비스 모두 join. 호스트 단위 객체 (worker-vm·mac-server 에는 없음)
+- **nexus docker network** (L15): ops-vm 내부, caddy / postgres / registry / monitoring / airflow 서비스 모두 join. 호스트 단위 객체 (worker-vm·mac-server 에는 없음)
+- **monitoring scrape**: Prometheus (ops-vm 컨테이너) → node_exporter:9100 tailnet 직결 (worker-vm / mac-server). mac-server 는 intermittent — scrape fail 은 정상
 
 ## OCI 자원
 
@@ -57,6 +61,7 @@ registry storage 도 ops-vm 부트 디스크 안 (docker named volume). 디스�
 | Tailscale 노드 가입 / ACL | nexus-prime (수동, `docs/runbook.md`) |
 | 호스트 부트스트랩 (swap·Docker·unattended-upgrades) | nexus-prime `hosts/{host}/host-setup.sh` |
 | Caddy / Postgres / Registry 컨테이너 | nexus-prime `compose/{기능}/` |
+| Prometheus / Grafana / statsd_exporter / cAdvisor / node_exporter | nexus-prime `compose/monitoring/` |
 | airflow control plane (api-server·scheduler·dag-processor) | airflow-stack |
 | airflow edge worker | airflow-stack |
 | DAG / 워크로드 코드 | airflow-stack + 도메인 repo (예: lol-list) |

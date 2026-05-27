@@ -44,6 +44,33 @@ if ! command -v tailscale >/dev/null 2>&1; then
   echo "tailscale 설치 완료 — sudo tailscale up --ssh 로 인증 필요"
 fi
 
+# node_exporter — Prometheus scrape 대상 (monitoring 스택 R4). linux-arm64
+NODE_EXPORTER_VERSION="1.8.2"
+if ! systemctl is-active --quiet node_exporter 2>/dev/null; then
+  curl -fsSL "https://github.com/prometheus/node_exporter/releases/download/v${NODE_EXPORTER_VERSION}/node_exporter-${NODE_EXPORTER_VERSION}.linux-arm64.tar.gz" \
+    | sudo tar -xz -C /usr/local/bin --strip-components=1 "node_exporter-${NODE_EXPORTER_VERSION}.linux-arm64/node_exporter"
+  sudo useradd --system --no-create-home --shell /bin/false node_exporter 2>/dev/null || true
+  sudo tee /etc/systemd/system/node_exporter.service >/dev/null <<'EOF'
+[Unit]
+Description=node_exporter
+After=network.target
+
+[Service]
+User=node_exporter
+ExecStart=/usr/local/bin/node_exporter --web.listen-address=:9100
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+EOF
+  sudo systemctl daemon-reload
+  sudo systemctl enable --now node_exporter
+  echo "node_exporter ${NODE_EXPORTER_VERSION} 설치 완료"
+else
+  echo "node_exporter 이미 실행 중"
+fi
+
 # Tailscale 호스트명 설정 (이미 up 상태일 때만)
 # TAILSCALE_HOSTNAME 은 git 에 박지 않음 — 호출 시 env 로 전달: TAILSCALE_HOSTNAME=<name> bash host-setup.sh
 if tailscale status >/dev/null 2>&1; then
