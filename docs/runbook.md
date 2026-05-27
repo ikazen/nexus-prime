@@ -132,6 +132,8 @@ colima stop && colima start --cpu 6 --memory 8
 
 `*.tfstate` 는 gitignored. 변경 후 password manager 또는 OCI Object Storage Always Free 에 백업. 분실 시 import 재실행 가능하지만 시간 소모.
 
+백업 대상: `terraform.tfstate` 와 `terraform.tfstate.backup` 둘 다. `.backup` 은 직전 apply 상태를 보존하므로 롤백 시 유용.
+
 ## 인스턴스 / 메타 손실 시 재배포
 
 장애 복구 = "인스턴스 재설치" 와 동일 절차 (L18). 위 섹션 참조.
