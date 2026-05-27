@@ -82,11 +82,6 @@ docker push registry.internal/<name>:<tag>
 docker pull registry.internal/<name>:<tag>
 ```
 
-**bootstrap 예외 (dnsmasq 최초 배포 시):** DNS가 아직 없어 `registry.internal` 미해석. 이 경우에만 `<OPS_TAILNET_IP>:5000` 직접 사용:
-```bash
-docker build -t <OPS_TAILNET_IP>:5000/dnsmasq:latest .
-docker push <OPS_TAILNET_IP>:5000/dnsmasq:latest
-```
 
 ## Registry GC
 
