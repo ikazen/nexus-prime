@@ -28,7 +28,6 @@ airflow-stack 단일 repo 에서 인프라 분리 → nexus-prime 신규 repo. �
 - worker-vm 재생성 (75 → 50 GB), ops-vm 확장 (125 → 150 GB) — `airflow-stack:tasks.md` Phase 9 와 합쳐 진행
 - registry retention 정책 자동화 (cron + `registry garbage-collect`)
 - 디스크 사용량 모니터링 (registry GC + alert)
-- monitoring 스택 도입 — Grafana + Prometheus + node_exporter + statsd_exporter, `compose/monitoring/` 단일 stack, 2주 retention. airflow 메트릭 포함. 상세 = `docs/decisions.md` R4
 - 관측성 stack 후속 (R4 후속) — Alertmanager → Loki + Promtail → oauth2-proxy. `compose/monitoring/` 안 통합
 - data 인프라 (R5) — dbt-core (airflow worker image 통합 + Cosmos), MinIO on mac-server (data lake / artifact)
 - tofu state remote backend (협업 / 다중 환경 시)

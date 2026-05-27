@@ -32,11 +32,9 @@
 | R1 | Auth manager (Caddy 뒤 airflow `SimpleAuthManager`) | 다중 사용자 / RBAC, UI 노출 표면 확대 | `FabAuthManager` (airflow-stack 측 결정) |
 | R2 | registry 외부 노출 X (tailnet IP bind only) | 외부 CI / 다른 노드에서 push 필요 | Caddy 뒤 `registry.<your-domain>` + basic auth |
 | R3 | tofu state = 로컬 (`.tfstate` gitignore + password manager 백업) | 다중 운영자 / 협업 | OCI Object Storage backend |
-| R4 | 모니터링 미도입. 가시성 = 호스트 ssh + `docker ps` + `tofu plan` + `tailscale status` (audit C+) | 장애 디버깅 빈도 증가 / airflow DAG 성능 추적 필요 / 운영 routine 정착 | Grafana + Prometheus + node_exporter + statsd_exporter (+ cAdvisor 옵션). 상세 ↓ |
+| R4 | **도입됨 (2026-05-27)**. Grafana + Prometheus + node_exporter + statsd_exporter + cAdvisor. `compose/monitoring/`. Grafana 자체 로그인. 상세 ↓ | — | — |
 
-## R4 보충 — 모니터링 스택 도입 계획
-
-도입 시점은 R4 트리거 발생 후. 결정만 먼저 못 박아 둠.
+## R4 보충 — 모니터링 스택 도입 계획 (도입됨 2026-05-27)
 
 ### 스택 선택 — Grafana + Prometheus + node_exporter
 - 실무 표준 (k8s 환경 포함) — PromQL / alert rule / Grafana dashboard / statsd_exporter mapping 학습 ROI 최대
