@@ -1,0 +1,30 @@
+global:
+  scrape_interval: 30s
+  evaluation_interval: 30s
+
+scrape_configs:
+  - job_name: node_ops_vm
+    static_configs:
+      - targets: ['node-exporter:9100']
+        labels:
+          host: ops-vm
+
+  - job_name: node_worker_vm
+    static_configs:
+      - targets: ['worker-vm:9100']
+        labels:
+          host: worker-vm
+
+  - job_name: node_mac_server
+    static_configs:
+      - targets: ['mac-server:9100']
+        labels:
+          host: mac-server
+
+  - job_name: statsd
+    static_configs:
+      - targets: ['statsd-exporter:9102']
+
+  - job_name: cadvisor
+    static_configs:
+      - targets: ['cadvisor:8080']
