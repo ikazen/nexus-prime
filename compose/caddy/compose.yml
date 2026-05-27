@@ -4,6 +4,7 @@ services:
     container_name: caddy
     environment:
       AIRFLOW_DOMAIN: ${AIRFLOW_DOMAIN}
+      GRAFANA_DOMAIN: ${GRAFANA_DOMAIN}
     ports:
       - "80:80"
       - "443:443"
