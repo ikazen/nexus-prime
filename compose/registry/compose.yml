@@ -16,6 +16,12 @@ services:
         max-file: "3"
     networks:
       - nexus
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:5000/v2/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     restart: unless-stopped
 
 volumes:

@@ -9,6 +9,7 @@ services:
     command:
       - --address=/.internal/${OPS_TAILNET_IP}
       - --listen-address=${OPS_TAILNET_IP}
+      - --listen-address=127.0.0.1
       - --bind-interfaces
       - --server=1.1.1.1
       - --server=8.8.8.8
@@ -21,4 +22,10 @@ services:
       options:
         max-size: "10m"
         max-file: "2"
+    healthcheck:
+      test: ["CMD", "dig", "@127.0.0.1", "-p", "53", ".", "NS", "+short"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     restart: unless-stopped
