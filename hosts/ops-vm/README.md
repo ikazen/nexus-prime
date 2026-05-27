@@ -8,7 +8,7 @@ control plane. 인프라 컨테이너 = caddy + postgres + registry. airflow wor
 ssh ops-vm
 git clone <nexus-prime-url>
 cd nexus-prime
-bash hosts/ops-vm/host-setup.sh
+TAILSCALE_HOSTNAME=<your-hostname> bash hosts/ops-vm/host-setup.sh
 # 로그아웃 후 재로그인 (docker 그룹 적용)
 
 # 인프라 컨테이너

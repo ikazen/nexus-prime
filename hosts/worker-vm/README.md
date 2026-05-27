@@ -8,7 +8,7 @@ stable airflow worker (default queue). 인프라 컨테이너 0 — airflow-stac
 ssh worker-vm
 git clone <nexus-prime-url>
 cd nexus-prime
-bash hosts/worker-vm/host-setup.sh
+TAILSCALE_HOSTNAME=<your-hostname> bash hosts/worker-vm/host-setup.sh
 # 로그아웃 후 재로그인 (docker 그룹 적용)
 ```
 

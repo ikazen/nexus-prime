@@ -53,9 +53,14 @@ if ! command -v tailscale >/dev/null 2>&1; then
 fi
 
 # Tailscale 호스트명 설정 (이미 up 상태일 때만)
+# TAILSCALE_HOSTNAME 은 git 에 박지 않음 — 호출 시 env 로 전달: TAILSCALE_HOSTNAME=<name> bash host-setup.sh
 if tailscale status >/dev/null 2>&1; then
-  sudo tailscale set --hostname oci-vm-ops
-  echo "tailscale hostname = oci-vm-ops"
+  if [[ -n "${TAILSCALE_HOSTNAME:-}" ]]; then
+    sudo tailscale set --hostname "$TAILSCALE_HOSTNAME"
+    echo "tailscale hostname = $TAILSCALE_HOSTNAME"
+  else
+    echo "TAILSCALE_HOSTNAME 미설정 — hostname 변경 건너뜀 (sudo tailscale set --hostname <name> 으로 수동 설정)"
+  fi
 fi
 
 echo "=== ops-vm host-setup 완료 ==="

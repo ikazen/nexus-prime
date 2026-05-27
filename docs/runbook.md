@@ -46,8 +46,8 @@ docker exec -it postgres psql -U postgres -c "GRANT ALL ON DATABASE <db> TO <use
 ```bash
 ssh ops-vm
 cd ~/nexus-prime/compose/dnsmasq
-docker build -t oci-vm-ops:5000/dnsmasq:latest .
-docker push oci-vm-ops:5000/dnsmasq:latest
+docker build -t <OPS_TAILNET_IP>:5000/dnsmasq:latest .
+docker push <OPS_TAILNET_IP>:5000/dnsmasq:latest
 ```
 
 **서비스 추가 시:**
@@ -56,7 +56,7 @@ docker push oci-vm-ops:5000/dnsmasq:latest
 
 ## Private Registry 사용
 
-주소: `oci-vm-ops:5000` (tailnet 전용 HTTP — 공인 노출 없음).
+주소: `<OPS_TAILNET_IP>:5000` (tailnet 전용 HTTP — 공인 노출 없음).
 
 주소: `registry.internal` (Caddy 경유, tailnet 전용).
 
