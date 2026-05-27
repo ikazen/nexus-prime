@@ -1,6 +1,8 @@
 services:
   dnsmasq:
-    # DNS 구축 전이라 registry.internal 미해석 — bootstrap 주소(IP:5000) 사용
+    build: .
+    # DNS 구축 전이라 registry.internal 미해석 — bootstrap 주소(IP:5000) 직접 태그
+    # build: . 덕에 registry 없는 첫 셋업에서도 docker compose build 로 로컬 빌드 가능
     image: ${OPS_TAILNET_IP}:5000/dnsmasq:latest
     container_name: dnsmasq
     network_mode: host

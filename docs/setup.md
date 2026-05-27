@@ -55,7 +55,7 @@ MagicDNS ON, ACL 단일 사용자 기본값.
 ```
 git clone <nexus-prime-url>
 cd nexus-prime
-bash hosts/<host>/host-setup.sh
+TAILSCALE_HOSTNAME=<your-hostname> bash hosts/<host>/host-setup.sh
 # 재로그인 (docker 그룹 적용)
 ```
 
@@ -71,6 +71,9 @@ ssh ops-vm
 cd nexus-prime
 cp compose/_hosts/ops-vm.env.example compose/_hosts/ops-vm.env
 $EDITOR compose/_hosts/ops-vm.env   # POSTGRES_*, OPS_TAILNET_IP, AIRFLOW_DOMAIN
+
+# dnsmasq 이미지 빌드 (최초 셋업 시 registry 없음 — 로컬 빌드)
+docker compose -f compose/_hosts/ops-vm.yml --env-file compose/_hosts/ops-vm.env build dnsmasq
 
 docker compose -f compose/_hosts/ops-vm.yml --env-file compose/_hosts/ops-vm.env up -d
 ```

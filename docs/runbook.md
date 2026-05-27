@@ -45,9 +45,9 @@ docker exec -it postgres psql -U postgres -c "GRANT ALL ON DATABASE <db> TO <use
 **dnsmasq 이미지 재빌드 (registry 소실 시):**
 ```bash
 ssh ops-vm
-cd ~/nexus-prime/compose/dnsmasq
-docker build -t <OPS_TAILNET_IP>:5000/dnsmasq:latest .
-docker push <OPS_TAILNET_IP>:5000/dnsmasq:latest
+cd ~/nexus-prime
+docker compose -f compose/_hosts/ops-vm.yml --env-file compose/_hosts/ops-vm.env build dnsmasq
+docker compose -f compose/_hosts/ops-vm.yml --env-file compose/_hosts/ops-vm.env up -d dnsmasq
 ```
 
 **서비스 추가 시:**
