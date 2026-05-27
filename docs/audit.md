@@ -1,4 +1,4 @@
-# Infrastructure Audit — 2026-05-25
+# Infrastructure Audit — 2026-05-28 (갱신)
 
 평가 대상: `nexus-prime` (인프라 layer). airflow-stack (워크로드) 는 cross-reference 만.
 
@@ -13,9 +13,9 @@
 | 1 | 신규 재구축 (repo + 외부 .env) | B+ | 절차는 갖춤. secrets-backup.md 가 manual sync 라 drift 위험 |
 | 2 | 부분 복구 | A- | compose 단위 독립적, 1 회 chicken-and-egg (dnsmasq) 만 주의 |
 | 3 | 보안 | B  | 공인 표면 최소. 내부 (registry/registry-ui/postgres) 무인증 = tailnet 신뢰 |
-| 4 | 공개 repo 안전성 | A- | 도메인·home IP·home 경로 zero leak. 단 tailnet 호스트명 literal 만 L14 위반 |
+| 4 | 공개 repo 안전성 | A | L14 위반 전부 해소. git history filter-repo 로 정리 완료 |
 | 5 | 확장성 | A- | `compose/<svc>/ + include + Caddyfile + *.internal` 패턴 깔끔. 단 single-host bottleneck |
-| 6 | 현재 상태 가시성 | C+ | architecture/decisions 우수. tasks.md stale, 라이브 상태 dashboard 없음 |
+| 6 | 현재 상태 가시성 | B+ | 모니터링 스택(Prometheus+Grafana+Loki) 가동, 대시보드 2개 import. scripts/status.sh 추가 |
 | 7 | 신규 서비스 추가 | B+ | 결합점 (nexus / postgres / registry / *.internal) 명확. 단 example template 부재 |
 | 8 | IaC 준수 | A- | drift 0, lock 파일 commit, import 절차 완비. state remote backend 미도입 (R3 이미 인지) |
 
@@ -123,7 +123,7 @@
 
 ## 4. 공개 repo 안전성
 
-**Verdict: A-** — 도메인 / 공인 IP / 홈 경로 leak zero. 단 tailnet 호스트명만 L14 위반.
+**Verdict: A** — L14 위반 전부 해소. git history 까지 정리됨.
 
 ### 라이브 검증 결과 (`git ls-files | xargs grep ...`)
 
@@ -136,23 +136,17 @@
 | home 경로 (`/home/<user>` / `/Users/<user>`) | NO |
 | 사용자 이메일 | NO |
 | OCID / API key fingerprint | NO |
-| **tailnet hostname literal (`<host>-vm-ops` 류)** | **YES — 3 군데** |
+| tailnet hostname literal | NO (해소) |
 
-### L14 위반: tailnet 호스트명 leak
-- `hosts/ops-vm/host-setup.sh:57-58` — `tailscale set --hostname <literal>` (ops 호스트 별명 박힘)
-- `hosts/worker-vm/host-setup.sh:49-50` — 동일 (worker 호스트 별명 박힘)
-- `docs/runbook.md:49-50, 59` — registry 주소를 tailnet 별명 literal 로 표기
-
-심각도 낮음 (도메인 아님, 외부 해석 불가) 이지만 `L14` ("tailnet 실제 이름") 본인 정책 위반. 게다가 `registry.internal` 도입 후엔 tailnet 별명 표기는 굳이 쓸 이유 없음.
-
-**조치 권장**:
-- runbook 의 별명 literal → placeholder 또는 그냥 `${OPS_TAILNET_IP}:5000` 으로 통일
-- host-setup.sh 의 hostname 을 env 변수화 (`TAILSCALE_HOSTNAME=<...> bash hosts/ops-vm/host-setup.sh`) 또는 호스트별 README 절차로 분리
+### L14 조치 완료 (2026-05-28)
+- `hosts/ops-vm/host-setup.sh`, `hosts/worker-vm/host-setup.sh` — `TAILSCALE_HOSTNAME` env 변수화
+- `docs/runbook.md` — tailnet 별명 literal → placeholder
+- `scripts/deploy-ops-vm.sh` — 초기 버전에 도메인·IP·패스워드 하드코딩 → 전부 제거
 
 ### Git history 검증
-- `git log --all -p -- secrets-backup.md tofu/terraform.tfvars compose/_hosts/ops-vm.env` — 0 results (한 번도 commit 된 적 없음)
+- `git log --all -p -- secrets-backup.md tofu/terraform.tfvars compose/_hosts/ops-vm.env` — 0 results
 - `git log -S <domain>` — 0 results
-- 31 개 commit 모두 깨끗.
+- `git filter-repo --replace-text` 로 deploy-ops-vm.sh 관련 커밋 2개에서 민감 문자열 제거 후 force push 완료
 
 ---
 
@@ -184,25 +178,26 @@
 
 ## 6. 현재 상태 가시성
 
-**Verdict: C+** — 정적 문서 (architecture/decisions) 우수. 라이브 상태는 직접 들여다봐야 함.
+**Verdict: B+** — 모니터링 스택 가동으로 라이브 가시성 대폭 개선. 정적 문서도 우수.
 
 ### Strong
 - `docs/architecture.md` — 토폴로지 ASCII + OCI 자원 표 + 책임 분리 표. 1 분 이해 가능.
 - `docs/decisions.md` — L1~L18 잠긴 결정 + R1~R3 재고 가능 결정. 신규 PR 시 의사결정 기준.
 - `docs/runbook.md` — 일상 운영 절차. 인스턴스 재설치 / DB 추가 / registry / Caddy / Tailscale / colima 자원 등.
+- **모니터링 스택 (R4) 가동** — Prometheus + Grafana + Loki + Alertmanager + cAdvisor + node_exporter (3 노드)
+  - ops-vm: Prometheus scrape 5 타겟 all up, Loki 7d retention, Promtail 컨테이너 로그 수집
+  - worker-vm: node_exporter + promtail systemd 가동
+  - mac-server: node_exporter LaunchAgent 가동
+  - Grafana: Node Exporter Full (1860) + cAdvisor Exporter (14282) 대시보드 import 완료
+  - Alertmanager: Discord webhook, NodeDown / ServiceDown / DiskLow / MemLow 룰
+- `scripts/status.sh` — tofu plan + docker compose ps + tailscale status 한 방
+- caddy / registry / dnsmasq healthcheck 추가 → `compose ps` 에서 상태 즉시 확인
 
 ### Gaps
-- **`docs/tasks.md` stale** (`docs/tasks.md:21-22`): "tofu OCI 리소스 코드" 와 "tofu import 실행" 이 `[ ]` 미완료로 적혀 있음. **실제로는 둘 다 완료** (라이브 `tofu plan` = drift 0). 일관성 깨짐.
-- **라이브 상태 보기 표준 명령 없음**: `make status` 같은 한 줄 명령 없음. 현 상태 = "각 호스트 ssh 해서 docker ps + tofu plan + tailscale status 직접". 누가 reset 안 한 게 있는지 한 눈에 안 보임.
-- **컨테이너 health 모니터링 없음**: postgres 만 healthcheck 있음 (`compose/postgres/compose.yml:12-16`). caddy/registry/dnsmasq 는 healthcheck 0. compose ps 가 unknown 으로 나옴.
-- **로그 집계 없음**: 각 컨테이너 stdout (json-file 50MB rotate). incident 시 호스트 ssh 후 `docker logs` 찾아야 함.
-- **OCI 비용/quota dashboard 외부**: Always Free 한도 (4 OCPU / 24 GB / 200 GB / 1 reserved IP) 침해 알림 없음. 현재는 한도 안.
-- **TERMINATED boot volume 2 개 (125GB ops + 75GB worker) 잔존** 이 OCI Console 에 남아있음 (라이브 확인). 청구 안 되지만 indeterminate 상태 — 명시적 삭제 권장.
-
-### 권장 추가 (가벼움)
-- `Makefile` 또는 `scripts/status.sh`: `tofu plan -detailed-exitcode && docker compose -f .../ops-vm.yml ps && tailscale status` 한 방
-- 각 서비스에 healthcheck 추가 (caddy: `caddy validate`, registry: `wget -qO- localhost:5000/v2/`, dnsmasq: `dig @localhost test.internal`)
-- `docs/tasks.md` Phase 0 완료 처리, 또는 Phase 0 폐기 → Phase 1 (운영 단계) 로 갱신
+- **OCI 비용/quota dashboard 외부**: Always Free 한도 침해 알림 없음. 현재 한도 내.
+- **로그: mac-server 미수집** — Colima VM 경로 복잡성으로 보류. ops-vm / worker-vm 으로 대부분 커버.
+- **Airflow statsd 메트릭 미연동**: statsd_exporter 가동 중이나 Airflow 측 설정 미완 (airflow-stack 영역).
+- **Grafana alert 미설정**: Alertmanager 룰은 있으나 Grafana UI alert 미구성.
 
 ---
 
@@ -265,18 +260,21 @@
 
 ## 우선순위 Action Items
 
+완료 항목은 취소선.
+
 | 우선 | 항목 | 근거 | 소요 |
 |---|---|---|---|
-| P0 | `docs/runbook.md` 의 tailnet 별명 literal 3 군데 → placeholder. host-setup.sh 의 hostname env 변수화 | L14 위반 — 본인 정책 | 15 분 |
-| P0 | `docs/tasks.md` Phase 0 완료 처리 (tofu 항목 2 개 `[x]`) | stale — 현재 상태 가시성 깨짐 | 5 분 |
-| P1 | `compose/dnsmasq/compose.yml` 에 `build: .` 추가 | 신규 셋업 chicken-and-egg 제거 | 5 분 |
-| P1 | `secrets-backup.md` 의 외부 계정 정보 (DNS provider / Tailscale account / OCI 테넌시 이메일 + MFA) 추가 | 신규 재구축 시 외부 의존 셋업 단계 부재 | 10 분 |
-| P1 | `scripts/status.sh` (또는 Makefile target) — tofu plan + docker ps + tailscale status 한 방 | 라이브 가시성 | 20 분 |
-| P2 | TERMINATED boot volume 2 개 (125GB ops + 75GB worker) 명시적 삭제 | 정리 + 의도 명확화 | 5 분 |
-| P2 | caddy/registry/dnsmasq healthcheck 추가 | compose ps 한 눈에 상태 | 30 분 |
-| P2 | `tofu/terraform.tfstate.backup` 도 백업 대상으로 runbook 에 명시 | state 관리 명확화 | 5 분 |
+| ~~P0~~ | ~~`docs/runbook.md` 의 tailnet 별명 literal → placeholder. host-setup.sh hostname env 변수화~~ | ~~L14 위반~~ | 완료 |
+| ~~P0~~ | ~~`docs/tasks.md` Phase 0 완료 처리~~ | ~~stale~~ | 완료 |
+| ~~P1~~ | ~~`compose/dnsmasq/compose.yml` 에 `build: .` 추가~~ | ~~chicken-and-egg 제거~~ | 완료 |
+| ~~P1~~ | ~~`scripts/status.sh`~~ | ~~라이브 가시성~~ | 완료 |
+| ~~P2~~ | ~~TERMINATED boot volume 2 개 삭제~~ | ~~정리~~ | 완료 |
+| ~~P2~~ | ~~caddy/registry/dnsmasq healthcheck 추가~~ | ~~compose ps 상태~~ | 완료 |
+| ~~P2~~ | ~~`tofu/terraform.tfstate.backup` 백업 대상 runbook 명시~~ | ~~state 관리~~ | 완료 |
+| ~~R4~~ | ~~monitoring 스택 (Prometheus+Grafana+Loki+Alertmanager+node_exporter×3+cAdvisor)~~ | ~~가시성~~ | 완료 |
+| P1 | `secrets-backup.md` 의 외부 계정 정보 (DNS provider / Tailscale account / OCI 테넌시 이메일+MFA) 추가 | 신규 재구축 시 외부 의존 셋업 단계 부재 | 10 분 |
 | P3 | OCI API key rotation routine (분기 1 회 fingerprint 갱신) | 장기 살아있는 key 위험 | routine 추가 |
 | P3 | `compose/example/` template (postgres user + Caddy *.internal + nexus network) | 신규 서비스 추가자 onboarding | 1 시간 |
 | P3 | registry / registry-ui 에 basic auth 추가 — tailnet 다중 사용자 트리거 시만 | R2 의 사전 준비 | 1 시간 |
-| P4 | `secrets-backup.md` 자체를 age 암호화 (`secrets-backup.md.age` commit + decrypt 절차) | dev 머신 침해 위험 감소 | 1 시간 |
+| P4 | `secrets-backup.md` 자체를 age 암호화 | dev 머신 침해 위험 감소 | 1 시간 |
 | P4 | tofu state OCI Object Storage backend 로 이전 | R3 트리거 (다중 운영자) 시 | 1 시간 |
