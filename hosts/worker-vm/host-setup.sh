@@ -71,6 +71,34 @@ else
   echo "node_exporter 이미 실행 중"
 fi
 
+# Promtail — Loki 로그 수집 (monitoring 스택 R4 후속)
+PROMTAIL_VERSION="3.2.0"
+if ! systemctl is-active --quiet promtail 2>/dev/null; then
+  curl -fsSL "https://github.com/grafana/loki/releases/download/v${PROMTAIL_VERSION}/promtail-linux-arm64.zip" \
+    -o /tmp/promtail.zip
+  sudo unzip -o /tmp/promtail.zip -d /usr/local/bin/ promtail-linux-arm64
+  sudo mv /usr/local/bin/promtail-linux-arm64 /usr/local/bin/promtail
+  sudo chmod +x /usr/local/bin/promtail
+  rm /tmp/promtail.zip
+  sudo tee /etc/systemd/system/promtail.service >/dev/null <<'EOF'
+[Unit]
+Description=promtail
+After=network.target
+
+[Service]
+ExecStart=/usr/local/bin/promtail -config.file=/etc/promtail/promtail.yml -config.expand-env=true
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+EOF
+  sudo systemctl daemon-reload
+  echo "promtail ${PROMTAIL_VERSION} 설치 완료 — /etc/promtail/promtail.yml 설정 후 'sudo systemctl enable --now promtail'"
+else
+  echo "promtail 이미 실행 중"
+fi
+
 # Tailscale 호스트명 설정 (이미 up 상태일 때만)
 # TAILSCALE_HOSTNAME 은 git 에 박지 않음 — 호출 시 env 로 전달: TAILSCALE_HOSTNAME=<name> bash host-setup.sh
 if tailscale status >/dev/null 2>&1; then

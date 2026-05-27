@@ -36,6 +36,12 @@ launchctl unload ~/Library/LaunchAgents/local.airflow.colima.plist
 
 macOS launchd 가 `${HOME}` 자동 보간 안 함. 동작 안 하면 절대경로로 수정 (`/Users/<your-user>/Library/Logs/...`). 사용자 home 경로는 git 에 안 박힘 — 로컬 mac 의 plist 만 편집.
 
+## Promtail (monitoring 스택 R4 후속, 선택)
+
+Colima VM 안에 docker가 있어서 `/var/lib/docker/containers` 경로가 달라 설정이 복잡함. 우선순위 낮음 — ops-vm / worker-vm 로그만으로도 대부분 커버됨.
+
+필요 시: Colima VM 안에서 직접 promtail 실행하거나 `docker_sd_configs` 로 Colima socket 마운트.
+
 ## node_exporter (monitoring 스택 R4)
 
 ```

@@ -14,6 +14,17 @@ TAILSCALE_HOSTNAME=<your-hostname> bash hosts/worker-vm/host-setup.sh
 
 이후 airflow workload (edge worker) 는 별도 repo — airflow-stack 의 `infra/worker-vm/` 참조.
 
+## Promtail 설정 (host-setup.sh 실행 후)
+
+host-setup.sh 가 바이너리 설치까지만 함. config 생성 후 활성화 필요:
+
+```
+sudo mkdir -p /etc/promtail
+sudo cp ~/nexus-prime/compose/monitoring/promtail-node.yml.example /etc/promtail/promtail.yml
+sudo vi /etc/promtail/promtail.yml  # ${OPS_TAILNET_IP} 실제 값으로 치환
+sudo systemctl enable --now promtail
+```
+
 ## SSH
 
 `ssh/config.example` 참조.
