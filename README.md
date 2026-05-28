@@ -17,7 +17,8 @@ OCI 2 노드 + M1 1 노드 인프라 layer. Tailscale 메쉬, Caddy edge, Postgr
 ## 진입점
 
 - 신규 셋업: `docs/setup.md`
-- 일상 운영: `docs/runbook.md`
+- 일상 운영 (인프라): `docs/runbook.md`
+- 서비스 개발·배포: `docs/dev-guide.md`
 - 토폴로지: `docs/architecture.md`
 - 결정 이력: `docs/decisions.md`
 

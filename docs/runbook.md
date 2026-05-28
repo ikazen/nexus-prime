@@ -22,48 +22,9 @@
 
 ops-vm reserved IP 는 유지 (별도 리소스). 인스턴스 재생성 시 새 vnic 에 자동 attach.
 
-## 신규 서비스 추가 체크리스트
+## 신규 서비스 추가 / Registry / MinIO / Postgres DB 발급
 
-1. `compose/<svc>/compose.yml` 작성 — 기존 서비스(`compose/postgres/` 등) 복사 후 치환.
-   필수 항목:
-   ```yaml
-   networks:
-     nexus:
-       external: true
-   ```
-
-2. `compose/_hosts/ops-vm.yml` include 에 한 줄 추가:
-   ```yaml
-   - path: ../<svc>/compose.yml
-   ```
-
-3. 내부 노출 (`<svc>.internal`, tailnet 전용):
-   ```
-   # compose/caddy/Caddyfile 에 추가
-   http://<svc>.internal {
-       reverse_proxy <svc>:<port>
-   }
-   ```
-   외부 노출이면 `ops-vm.env` 에 `SVC_DOMAIN` 추가 + Caddyfile 에 HTTPS 블록.
-
-4. Postgres DB/user 필요 시 → 아래 섹션 참조.
-
-5. 이미지가 self-host registry 라면:
-   ```bash
-   docker build -t registry.internal/<svc>:<tag> .
-   docker push registry.internal/<svc>:<tag>
-   ```
-
-## Postgres 신규 DB / user 추가 (공유 DB, L4)
-
-서비스별 절차는 해당 서비스 repo 의 runbook 참조 (예: `airflow-stack:docs/runbook.md`).
-
-일반 명령 패턴:
-```
-docker exec -it postgres psql -U postgres -c "CREATE DATABASE <db>;"
-docker exec -it postgres psql -U postgres -c "CREATE USER <user> WITH PASSWORD '<pw>';"
-docker exec -it postgres psql -U postgres -c "GRANT ALL ON DATABASE <db> TO <user>;"
-```
+개발자용 절차 → `docs/dev-guide.md` 참조.
 
 ## 내부 DNS (dnsmasq)
 
@@ -81,39 +42,6 @@ cd ~/nexus-prime
 docker compose -f compose/_hosts/ops-vm.yml --env-file compose/_hosts/ops-vm.env build dnsmasq
 docker compose -f compose/_hosts/ops-vm.yml --env-file compose/_hosts/ops-vm.env up -d dnsmasq
 ```
-
-**서비스 추가 시:**
-- Caddyfile에 `http://<name>.internal { reverse_proxy <container>:<port> }` 추가
-- dnsmasq는 `*.internal` 전부를 ops-vm으로 해석하므로 DNS 변경 불필요
-
-## Private Registry 사용
-
-주소: `<OPS_TAILNET_IP>:5000` (tailnet 전용 HTTP — 공인 노출 없음).
-
-주소: `registry.internal` (Caddy 경유, tailnet 전용).
-
-신규 호스트에서 처음 쓸 때 insecure registry 등록 필요 (한 번만):
-
-```bash
-# Linux (ops-vm, worker-vm)
-echo '{"insecure-registries": ["registry.internal"]}' | sudo tee /etc/docker/daemon.json
-sudo systemctl restart docker
-
-# mac-server (colima) — colima VM 내부에서 .internal DNS 미지원, IP:5000 직접 사용
-# ~/.colima/default/colima.yaml 에 아래 추가 후 colima restart
-# docker:
-#   insecure-registries:
-#     - <OPS_TAILNET_IP>:5000
-```
-
-기본 사용:
-
-```bash
-docker tag <image> registry.internal/<name>:<tag>
-docker push registry.internal/<name>:<tag>
-docker pull registry.internal/<name>:<tag>
-```
-
 
 ## Registry GC
 
