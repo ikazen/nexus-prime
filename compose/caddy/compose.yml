@@ -5,6 +5,7 @@ services:
     environment:
       AIRFLOW_DOMAIN: ${AIRFLOW_DOMAIN}
       GRAFANA_DOMAIN: ${GRAFANA_DOMAIN}
+      MAC_TAILNET_IP: ${MAC_TAILNET_IP}
     ports:
       - "80:80"
       - "443:443"

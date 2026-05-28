@@ -56,6 +56,14 @@ Colima VM 안에 docker가 있어서 `/var/lib/docker/containers` 경로가 달�
 
 필요 시: Colima VM 안에서 직접 promtail 실행하거나 `docker_sd_configs` 로 Colima socket 마운트.
 
+## Docker (DOCKER_HOST)
+
+SSH 비대화형 세션에서 `docker` 명령이 Colima socket 을 못 찾는 문제 방지. `~/.zshrc` 에 추가:
+
+```bash
+export DOCKER_HOST="unix://${HOME}/.colima/default/docker.sock"
+```
+
 ## node_exporter (monitoring 스택 R4)
 
 ```
