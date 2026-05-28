@@ -34,14 +34,15 @@ echo '{"insecure-registries": ["registry.internal"]}' | sudo tee /etc/docker/dae
 sudo systemctl restart docker
 ```
 
-**mac-server (Colima)**: Colima VM 안에서 `registry.internal` DNS 미작동 → tailnet IP 직접 사용:
+**mac-server (Colima)**: Docker는 포트 미지정 시 HTTPS(443)를 시도하므로 `:80` 명시 필요:
 ```yaml
 # ~/.colima/default/colima.yaml
 docker:
   insecure-registries:
-    - <OPS_TAILNET_IP>:5000
+    - registry.internal:80
 ```
-`colima restart` 후 주소도 `<OPS_TAILNET_IP>:5000/<name>:<tag>` 로.
+`colima restart` 후 주소도 `registry.internal:80/<name>:<tag>` 로.
+DNS 미작동 시 fallback: `<OPS_TAILNET_IP>:5000`.
 
 **push / pull**:
 ```bash
