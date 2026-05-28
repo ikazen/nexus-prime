@@ -14,6 +14,8 @@ services:
       options:
         max-size: "10m"
         max-file: "2"
+    depends_on:
+      - registry
     networks:
       - nexus
     restart: unless-stopped
