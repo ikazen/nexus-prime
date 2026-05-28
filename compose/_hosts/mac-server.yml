@@ -1,0 +1,8 @@
+# mac-server 인프라 컨테이너 wrapper.
+#
+# 사용:
+#   cd nexus-prime
+#   docker compose -f compose/_hosts/mac-server.yml --env-file compose/_hosts/mac-server.env up -d
+
+include:
+  - path: ../minio/compose.yml

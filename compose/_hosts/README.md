@@ -4,9 +4,9 @@
 
 ## 호스트별 현황
 
-- `ops-vm.yml` — caddy + postgres + registry
+- `ops-vm.yml` — caddy + postgres + registry + monitoring
+- `mac-server.yml` — minio
 - worker-vm — **wrapper 없음**. 인프라 컨테이너 0 (airflow repo 의 edge worker 만). `hosts/worker-vm/` 참조
-- mac-server — **wrapper 없음**. 인프라 컨테이너 0 (airflow repo 의 edge worker 만). `hosts/mac-server/` 참조
 
 ## 운영
 

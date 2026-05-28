@@ -1,6 +1,6 @@
 # mac-server (M1)
 
-intermittent gpu/default airflow worker. 인프라 책임 = Colima 시동 + LaunchAgent. 인프라 컨테이너 0 — airflow-stack 의 edge-worker 만 (Colima 의 docker 위에서).
+intermittent gpu/default airflow worker + MinIO (data lake). 인프라 책임 = Colima 시동 + LaunchAgent.
 
 ## 셋업
 
@@ -15,6 +15,20 @@ colima start --cpu 4 --memory 8 --vm-type vz
 cp hosts/mac-server/launchd/local.airflow.colima.plist ~/Library/LaunchAgents/
 launchctl load ~/Library/LaunchAgents/local.airflow.colima.plist
 ```
+
+## MinIO (인프라 컨테이너)
+
+```bash
+cd nexus-prime
+cp compose/_hosts/mac-server.env.example compose/_hosts/mac-server.env
+$EDITOR compose/_hosts/mac-server.env   # MINIO_ROOT_PASSWORD 설정
+
+docker compose -f compose/_hosts/mac-server.yml --env-file compose/_hosts/mac-server.env up -d
+```
+
+- S3 API: `http://localhost:9000` (tailnet 내: `http://minio.internal`)
+- Console: `http://localhost:9001` (tailnet 내: `http://minio-console.internal`)
+- `restart: unless-stopped` → Colima 재시동 시 자동 복구
 
 이후 airflow workload (edge worker) 는 별도 repo — airflow-stack 의 `infra/mac-server/` 참조.
 
