@@ -274,7 +274,7 @@
 | ~~R4~~ | ~~monitoring 스택 (Prometheus+Grafana+Loki+Alertmanager+node_exporter×3+cAdvisor)~~ | ~~가시성~~ | 완료 |
 | ~~P1~~ | ~~`secrets-backup.md` 의 외부 계정 정보 (DNS provider / Tailscale account / OCI 테넌시 이메일+MFA) 추가~~ | ~~신규 재구축 시 외부 의존 셋업 단계 부재~~ | 완료 |
 | P3 | OCI API key rotation routine (분기 1 회 fingerprint 갱신) | 장기 살아있는 key 위험 | routine 추가 |
-| ~~P3~~ | ~~`compose/example/` template (postgres user + Caddy *.internal + nexus network)~~ | ~~신규 서비스 추가자 onboarding~~ | 완료 |
+| ~~P3~~ | ~~신규 서비스 추가 체크리스트~~ | ~~신규 서비스 추가자 onboarding~~ | 완료 (`docs/runbook.md`) |
 | P3 | registry / registry-ui 에 basic auth 추가 — tailnet 다중 사용자 트리거 시만 | R2 의 사전 준비 | 1 시간 |
 | P4 | `secrets-backup.md` 자체를 age 암호화 | dev 머신 침해 위험 감소 | 1 시간 |
 | P4 | tofu state OCI Object Storage backend 로 이전 | R3 트리거 (다중 운영자) 시 | 1 시간 |

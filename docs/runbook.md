@@ -22,6 +22,38 @@
 
 ops-vm reserved IP 는 유지 (별도 리소스). 인스턴스 재생성 시 새 vnic 에 자동 attach.
 
+## 신규 서비스 추가 체크리스트
+
+1. `compose/<svc>/compose.yml` 작성 — 기존 서비스(`compose/postgres/` 등) 복사 후 치환.
+   필수 항목:
+   ```yaml
+   networks:
+     nexus:
+       external: true
+   ```
+
+2. `compose/_hosts/ops-vm.yml` include 에 한 줄 추가:
+   ```yaml
+   - path: ../<svc>/compose.yml
+   ```
+
+3. 내부 노출 (`<svc>.internal`, tailnet 전용):
+   ```
+   # compose/caddy/Caddyfile 에 추가
+   http://<svc>.internal {
+       reverse_proxy <svc>:<port>
+   }
+   ```
+   외부 노출이면 `ops-vm.env` 에 `SVC_DOMAIN` 추가 + Caddyfile 에 HTTPS 블록.
+
+4. Postgres DB/user 필요 시 → 아래 섹션 참조.
+
+5. 이미지가 self-host registry 라면:
+   ```bash
+   docker build -t registry.internal/<svc>:<tag> .
+   docker push registry.internal/<svc>:<tag>
+   ```
+
 ## Postgres 신규 DB / user 추가 (공유 DB, L4)
 
 서비스별 절차는 해당 서비스 repo 의 runbook 참조 (예: `airflow-stack:docs/runbook.md`).
