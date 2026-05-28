@@ -1,0 +1,58 @@
+# 신규 서비스 template. mysvc -> 실제 서비스 이름으로 일괄 치환.
+#
+# 추가 체크리스트 (이 파일 외):
+#
+# 1. compose/_hosts/ops-vm.yml include 에 한 줄 추가:
+#      - path: ../mysvc/compose.yml
+#
+# 2. compose/caddy/Caddyfile 에 내부 라우팅 추가 (tailnet 전용):
+#      http://mysvc.internal {
+#          reverse_proxy mysvc:<port>
+#      }
+#    외부 노출이면 대신:
+#      mysvc.{$YOUR_DOMAIN} {
+#          reverse_proxy mysvc:<port>
+#      }
+#    (ops-vm.env 에 MYSVC_DOMAIN 변수 추가 + Caddy rebuild)
+#
+# 3. postgres DB/user 발급 (docs/runbook.md:26-34):
+#      docker exec -it postgres psql -U postgres
+#      CREATE DATABASE mysvc;
+#      CREATE USER mysvc WITH PASSWORD '...';
+#      GRANT ALL PRIVILEGES ON DATABASE mysvc TO mysvc;
+#      \c mysvc
+#      GRANT ALL ON SCHEMA public TO mysvc;
+#
+# 4. 이미지가 self-host registry 라면 먼저 build/push:
+#      docker build -t registry.internal/mysvc:<tag> .
+#      docker push registry.internal/mysvc:<tag>
+
+services:
+  mysvc:
+    image: registry.internal/mysvc:latest   # 또는 public image
+    container_name: mysvc
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://mysvc:${MYSVC_DB_PASSWORD}@postgres:5432/mysvc
+    volumes:
+      - mysvc-data:/data
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:<port>/health"]
+      interval: 30s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "3"
+    networks:
+      - nexus
+    restart: unless-stopped
+
+volumes:
+  mysvc-data:
+
+networks:
+  nexus:
+    external: true
