@@ -272,7 +272,7 @@
 | ~~P2~~ | ~~caddy/registry/dnsmasq healthcheck 추가~~ | ~~compose ps 상태~~ | 완료 |
 | ~~P2~~ | ~~`tofu/terraform.tfstate.backup` 백업 대상 runbook 명시~~ | ~~state 관리~~ | 완료 |
 | ~~R4~~ | ~~monitoring 스택 (Prometheus+Grafana+Loki+Alertmanager+node_exporter×3+cAdvisor)~~ | ~~가시성~~ | 완료 |
-| P1 | `secrets-backup.md` 의 외부 계정 정보 (DNS provider / Tailscale account / OCI 테넌시 이메일+MFA) 추가 | 신규 재구축 시 외부 의존 셋업 단계 부재 | 10 분 |
+| ~~P1~~ | ~~`secrets-backup.md` 의 외부 계정 정보 (DNS provider / Tailscale account / OCI 테넌시 이메일+MFA) 추가~~ | ~~신규 재구축 시 외부 의존 셋업 단계 부재~~ | 완료 |
 | P3 | OCI API key rotation routine (분기 1 회 fingerprint 갱신) | 장기 살아있는 key 위험 | routine 추가 |
 | P3 | `compose/example/` template (postgres user + Caddy *.internal + nexus network) | 신규 서비스 추가자 onboarding | 1 시간 |
 | P3 | registry / registry-ui 에 basic auth 추가 — tailnet 다중 사용자 트리거 시만 | R2 의 사전 준비 | 1 시간 |
