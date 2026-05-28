@@ -9,7 +9,7 @@
                            │  HTTPS 443/80 — airflow.<your-domain>, grafana.<your-domain>
                            ▼
 ┌──────────────────────────────────────────────────────────────────┐
-│  ops-vm  (OCI A1.Flex 2/12 GB, 150 GB boot, public IP)          │
+│  ops-vm  (OCI A1.Flex 2/12 GB, 150 GB boot, public IP)           │
 ├──────────────────────────────────────────────────────────────────┤
 │  Caddy        ──► api-server:8080, grafana:3000                  │
 │               ──► minio.internal → mac-server:9000 (tailnet)     │
@@ -21,7 +21,7 @@
                      │ Tailscale (MagicDNS / ACL)
                      │ Prometheus ──► node_exporter:9100 (tailnet)
 ┌────────────────────┴─────────────────────────────────────────────┐
-│  worker-vm  (OCI A1.Flex 2/12 GB, 50 GB boot, private)          │
+│  worker-vm  (OCI A1.Flex 2/12 GB, 50 GB boot, private)           │
 ├──────────────────────────────────────────────────────────────────┤
 │  node_exporter :9100 (systemd)    Promtail (systemd)             │
 │  airflow edge worker  (airflow-stack repo)                       │
