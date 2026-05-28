@@ -58,8 +58,9 @@ docker pull registry.internal/<name>:<tag>
 
 ## Postgres DB 발급
 
-신규 서비스용 DB / user 발급:
+ops-vm SSH 접속 후 실행:
 ```bash
+ssh ops-vm
 docker exec -it postgres psql -U postgres -c "CREATE DATABASE <db>;"
 docker exec -it postgres psql -U postgres -c "CREATE USER <user> WITH PASSWORD '<pw>';"
 docker exec -it postgres psql -U postgres -c "GRANT ALL ON DATABASE <db> TO <user>;"
@@ -89,7 +90,10 @@ docker exec -it postgres psql -U postgres -c "GRANT ALL ON SCHEMA public TO <use
        reverse_proxy <svc>:<port>
    }
    ```
-   외부 노출이면 `ops-vm.env` 에 `SVC_DOMAIN` 추가 + Caddyfile 에 HTTPS 블록.
+   외부 노출 (`{$SVC_DOMAIN}`) 이면 추가로:
+   - `ops-vm.env` 에 `SVC_DOMAIN=<your-domain>` 추가
+   - `compose/caddy/compose.yml` 의 `environment:` 에 `SVC_DOMAIN: ${SVC_DOMAIN}` 추가
+   - Caddyfile 에 HTTPS 블록 추가
 
 4. Postgres DB/user 필요 시 → 위 섹션 참조.
 
