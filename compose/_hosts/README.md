@@ -4,15 +4,15 @@
 
 ## 호스트별 현황
 
-- `ops-vm.yml` — caddy + postgres + registry + monitoring
+- `ops-vm.yml` — caddy + postgres + registry(+ui) + dnsmasq + monitoring
 - `mac-server.yml` — minio
-- worker-vm — **wrapper 없음**. 인프라 컨테이너 0 (airflow repo 의 edge worker 만). `hosts/worker-vm/` 참조
+- worker-vm — **wrapper 없음**. 인프라 컨테이너 0 (airflow edge worker 만, 별도 repo)
 
 ## 운영
 
 ```
 cd nexus-prime
-docker network create nexus   # 호스트 1 회만
+docker network create nexus   # 호스트 1 회 (host-setup.sh 가 처리)
 docker compose -f compose/_hosts/<host>.yml --env-file compose/_hosts/<host>.env up -d
 ```
 

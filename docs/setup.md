@@ -83,9 +83,9 @@ docker compose -f compose/_hosts/ops-vm.yml --env-file compose/_hosts/ops-vm.env
 - `https://airflow.<your-domain>` 접속 (Caddy ACME 발급 직후 200 또는 502 — 502 는 airflow api-server 미가동, 정상)
 - `docker exec registry ls /var/lib/registry/docker` — registry 정상
 
-## 6. monitoring (R4)
+## 6. monitoring
 
-**ops-vm.env 에 R4 변수 추가:**
+**ops-vm.env 추가 변수:**
 ```
 GRAFANA_DOMAIN=grafana.<your-domain>
 GRAFANA_ADMIN_PASSWORD=<strong-password>
@@ -95,38 +95,9 @@ MAC_TAILNET_IP=<mac-server tailnet IP>
 
 **DNS:** `grafana.<your-domain>` A → ops-vm reserved IP.
 
-**node_exporter 설치:**
-- worker-vm: `host-setup.sh` 가 자동 설치 (node_exporter + promtail 바이너리)
+**node_exporter / promtail 설치:**
+- worker-vm: `host-setup.sh` 가 바이너리까지 설치 → promtail config 는 `hosts/worker-vm/README.md` 절차
 - mac-server: `hosts/mac-server/README.md` 의 node_exporter 절차 참조
-
-**worker-vm promtail 설정 (host-setup.sh 실행 후):**
-```bash
-sudo mkdir -p /etc/promtail
-sudo tee /etc/promtail/promtail.yml > /dev/null <<'EOF'
-server:
-  http_listen_port: 9080
-  grpc_listen_port: 0
-positions:
-  filename: /tmp/promtail-positions.yaml
-clients:
-  - url: http://<OPS_TAILNET_IP>:3100/loki/api/v1/push
-scrape_configs:
-  - job_name: docker
-    static_configs:
-      - targets: [localhost]
-        labels:
-          host: worker-vm
-          __path__: /var/lib/docker/containers/*/*-json.log
-    pipeline_stages:
-      - json:
-          expressions: {output: log, stream: stream}
-      - labels:
-          stream:
-      - output:
-          source: output
-EOF
-sudo systemctl enable --now promtail
-```
 
 **ops-vm 모니터링 스택 기동:**
 ```bash

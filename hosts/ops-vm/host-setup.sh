@@ -52,8 +52,7 @@ if ! command -v tailscale >/dev/null 2>&1; then
   echo "tailscale 설치 완료 — sudo tailscale up --ssh 로 인증 필요"
 fi
 
-# Tailscale 호스트명 설정 (이미 up 상태일 때만)
-# TAILSCALE_HOSTNAME 은 git 에 박지 않음 — 호출 시 env 로 전달: TAILSCALE_HOSTNAME=<name> bash host-setup.sh
+# TAILSCALE_HOSTNAME 은 git 에 박지 않음 — 호출 시 env 로 전달
 if tailscale status >/dev/null 2>&1; then
   if [[ -n "${TAILSCALE_HOSTNAME:-}" ]]; then
     sudo tailscale set --hostname "$TAILSCALE_HOSTNAME"

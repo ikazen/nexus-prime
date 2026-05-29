@@ -44,7 +44,7 @@ if ! command -v tailscale >/dev/null 2>&1; then
   echo "tailscale 설치 완료 — sudo tailscale up --ssh 로 인증 필요"
 fi
 
-# node_exporter — Prometheus scrape 대상 (monitoring 스택 R4). linux-arm64
+# node_exporter — Prometheus scrape 대상 (linux-arm64)
 NODE_EXPORTER_VERSION="1.8.2"
 if ! systemctl is-active --quiet node_exporter 2>/dev/null; then
   curl -fsSL "https://github.com/prometheus/node_exporter/releases/download/v${NODE_EXPORTER_VERSION}/node_exporter-${NODE_EXPORTER_VERSION}.linux-arm64.tar.gz" \
@@ -71,7 +71,7 @@ else
   echo "node_exporter 이미 실행 중"
 fi
 
-# Promtail — Loki 로그 수집 (monitoring 스택 R4 후속)
+# Promtail — Loki 로그 수집 (linux-arm64). config 는 worker-vm/README.md 참조
 PROMTAIL_VERSION="3.2.0"
 if ! systemctl is-active --quiet promtail 2>/dev/null; then
   curl -fsSL "https://github.com/grafana/loki/releases/download/v${PROMTAIL_VERSION}/promtail-linux-arm64.zip" \
@@ -99,8 +99,7 @@ else
   echo "promtail 이미 실행 중"
 fi
 
-# Tailscale 호스트명 설정 (이미 up 상태일 때만)
-# TAILSCALE_HOSTNAME 은 git 에 박지 않음 — 호출 시 env 로 전달: TAILSCALE_HOSTNAME=<name> bash host-setup.sh
+# TAILSCALE_HOSTNAME 은 git 에 박지 않음 — 호출 시 env 로 전달
 if tailscale status >/dev/null 2>&1; then
   if [[ -n "${TAILSCALE_HOSTNAME:-}" ]]; then
     sudo tailscale set --hostname "$TAILSCALE_HOSTNAME"

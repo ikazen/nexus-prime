@@ -48,32 +48,27 @@ launchctl unload ~/Library/LaunchAgents/local.airflow.colima.plist
 
 ## plist 의 `${HOME}` 보간
 
-macOS launchd 가 `${HOME}` 자동 보간 안 함. 동작 안 하면 절대경로로 수정 (`/Users/<your-user>/Library/Logs/...`). 사용자 home 경로는 git 에 안 박힘 — 로컬 mac 의 plist 만 편집.
-
-## Promtail (monitoring 스택 R4 후속, 선택)
-
-Colima VM 안에 docker가 있어서 `/var/lib/docker/containers` 경로가 달라 설정이 복잡함. 우선순위 낮음 — ops-vm / worker-vm 로그만으로도 대부분 커버됨.
-
-필요 시: Colima VM 안에서 직접 promtail 실행하거나 `docker_sd_configs` 로 Colima socket 마운트.
+macOS launchd 가 `${HOME}` 자동 보간 안 함. 동작 안 하면 plist 안 절대경로로 수정 (`/Users/<your-user>/Library/Logs/...`). 로컬 plist 만 편집 — git 에 안 박힘.
 
 ## Docker (DOCKER_HOST)
 
-SSH 비대화형 세션에서 `docker` 명령이 Colima socket 을 못 찾는 문제 방지. `~/.zshrc` 에 추가:
+SSH 비대화형에서 `docker` 가 Colima socket 미인식 방지. `~/.zshrc`:
 
 ```bash
 export DOCKER_HOST="unix://${HOME}/.colima/default/docker.sock"
 ```
 
-## node_exporter (monitoring 스택 R4)
+## node_exporter
 
 ```
 brew install node_exporter
-
 cp hosts/mac-server/launchd/local.node_exporter.plist ~/Library/LaunchAgents/
 launchctl load ~/Library/LaunchAgents/local.node_exporter.plist
 ```
 
-plist 의 `${HOME}` 보간 문제 발생 시 절대경로로 수정 (`/Users/<your-user>/Library/Logs/...`).
+## Promtail (선택)
+
+Colima VM 안에 docker 가 있어 `/var/lib/docker/containers` 경로가 달라 복잡. 우선순위 낮음 — ops-vm / worker-vm 로그가 대부분 커버. 필요 시 Colima VM 안에서 promtail 실행하거나 `docker_sd_configs` 로 Colima socket 마운트.
 
 ## SSH
 
