@@ -20,8 +20,8 @@ airflow-stack 단일 repo 에서 인프라 분리 → nexus-prime 신규 repo. �
 - [x] `docs/` 초기 문서 (architecture / setup / runbook / decisions / tasks)
 - [x] `tofu/` OCI 리소스 코드 (provider + VCN + NSG + instances + volumes + outputs)
 - [x] `tofu import` 실행 — 현 환경 OCID 매핑, `plan` drift 0 확인
-- [ ] airflow-stack 측 정리 (compose 가벼워짐, scripts/Caddyfile 삭제, docs 갱신)
-- [ ] 검증 — 현 환경 동작 확인, tofu plan drift 0 (tofu plan drift 0 = 확인됨, 현 환경 동작 확인 = airflow-stack 측 작업 후 종합)
+- [x] airflow-stack 측 정리 (compose 가벼워짐, scripts/Caddyfile 삭제, docs 갱신)
+- [x] 검증 — 현 환경 동작 확인, tofu plan drift 0
 
 ## 미래
 
