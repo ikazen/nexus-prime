@@ -45,7 +45,7 @@ docker compose -f compose/_hosts/ops-vm.yml --env-file compose/_hosts/ops-vm.env
 
 ## Registry GC
 
-자동 — `registry-gc.timer` (주 1 회 일 04:00) 가 `registry-gc.sh` 실행: repo 별 최신 5 태그만 남기고 (`retention.py`) → `garbage-collect -m` 으로 blob 회수. 설치는 `hosts/ops-vm/README.md`.
+자동 — `registry-gc.timer` (매일 04:00) 가 `registry-gc.sh` 실행: repo 별 최신 5 태그만 남기고 (`retention.py`) → `garbage-collect -m` 으로 blob 회수. 설치는 `hosts/ops-vm/README.md`.
 
 상태/수동:
 ```

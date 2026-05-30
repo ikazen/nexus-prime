@@ -19,7 +19,7 @@ docker compose -f compose/_hosts/ops-vm.yml --env-file compose/_hosts/ops-vm.env
 
 ## Registry GC 자동화 (1 회 설치)
 
-repo 별 태그 retention + GC 를 주 1 회 실행 (`runbook.md` 의 Registry GC).
+repo 별 태그 retention + GC 를 매일 실행 (`runbook.md` 의 Registry GC).
 
 ```
 sudo cp hosts/ops-vm/registry-gc.service hosts/ops-vm/registry-gc.timer /etc/systemd/system/
