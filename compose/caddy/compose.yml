@@ -22,7 +22,9 @@ services:
     networks:
       - nexus
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:2019/"]
+      # localhost는 컨테이너에서 ::1(IPv6)로 우선 resolve되나 admin은 127.0.0.1만 리스닝.
+      # 루트 /는 404 → /config/ 사용 (200)
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:2019/config/"]
       interval: 30s
       timeout: 5s
       retries: 3
