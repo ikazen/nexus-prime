@@ -125,7 +125,7 @@ def prune_repo(base: str, repo: str, keep: int, dry_run: bool) -> int:
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--registry-url", required=True, help="예: http://10.0.0.1:5000")
-    ap.add_argument("--keep", type=int, default=10, help="repo 별 보존 태그 수")
+    ap.add_argument("--keep", type=int, default=5, help="repo 별 보존 태그 수")
     ap.add_argument("--dry-run", action="store_true", help="삭제 없이 출력만")
     args = ap.parse_args()
 

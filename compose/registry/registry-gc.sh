@@ -3,7 +3,7 @@
 # OPS_TAILNET_IP 는 systemd unit 의 EnvironmentFile (compose/_hosts/ops-vm.env) 에서 주입.
 set -euo pipefail
 
-KEEP="${REGISTRY_KEEP:-10}"
+KEEP="${REGISTRY_KEEP:-5}"
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 echo "[registry-gc] retention 시작 (keep=$KEEP)"
