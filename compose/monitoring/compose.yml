@@ -16,6 +16,11 @@ services:
     extra_hosts:
       - "worker-vm:${WORKER_TAILNET_IP}"
       - "mac-server:${MAC_TAILNET_IP}"
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "3"
     networks:
       - nexus
     restart: unless-stopped
@@ -29,6 +34,11 @@ services:
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD}
     volumes:
       - grafana-data:/var/lib/grafana
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "3"
     networks:
       - nexus
     restart: unless-stopped
@@ -37,6 +47,11 @@ services:
     image: prom/statsd-exporter:v0.28.0
     container_name: statsd-exporter
     # airflow 가 nexus network 안에서 UDP 9125 로 직접 전송 — 포트 노출 불필요
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "3"
     networks:
       - nexus
     restart: unless-stopped
@@ -50,6 +65,11 @@ services:
     volumes:
       - /:/host:ro,rslave
     pid: host
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "3"
     networks:
       - nexus
     restart: unless-stopped
@@ -64,6 +84,11 @@ services:
       - /sys:/sys:ro
       - /var/lib/docker/:/var/lib/docker:ro
       - /dev/disk/:/dev/disk:ro
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "3"
     networks:
       - nexus
     restart: unless-stopped
@@ -76,6 +101,11 @@ services:
       - --storage.path=/alertmanager
     volumes:
       - ./alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "3"
     networks:
       - nexus
     restart: unless-stopped
@@ -90,6 +120,11 @@ services:
     volumes:
       - ./loki.yml:/etc/loki/loki.yml:ro
       - loki-data:/loki
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "3"
     networks:
       - nexus
     restart: unless-stopped
@@ -103,6 +138,11 @@ services:
       - ./promtail-ops.yml:/etc/promtail/promtail.yml:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - /var/lib/docker/containers:/var/lib/docker/containers:ro
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "3"
     networks:
       - nexus
     restart: unless-stopped
