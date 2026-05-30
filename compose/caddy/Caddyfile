@@ -3,11 +3,16 @@
 }
 
 http://minio.internal {
-    reverse_proxy {$MAC_TAILNET_IP}:9000
+    # .internal은 HTTP 전용 — MinIO가 보내는 HSTS 헤더 제거 (브라우저 https 강제 치환 방지)
+    reverse_proxy {$MAC_TAILNET_IP}:9000 {
+        header_down -Strict-Transport-Security
+    }
 }
 
 http://minio-console.internal {
-    reverse_proxy {$MAC_TAILNET_IP}:9001
+    reverse_proxy {$MAC_TAILNET_IP}:9001 {
+        header_down -Strict-Transport-Security
+    }
 }
 
 http://prometheus.internal {
