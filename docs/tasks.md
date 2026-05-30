@@ -25,7 +25,6 @@ airflow-stack 단일 repo 에서 인프라 분리 → nexus-prime 신규 repo. �
 
 ## 미래
 
-- registry retention 자동화 (cron + `registry garbage-collect`)
 - oauth2-proxy 로 `*.internal` SSO (R6)
 - dbt-core (airflow worker image + Cosmos) — R5 잔여
 - tofu state remote backend — R3 트리거 시

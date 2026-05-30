@@ -45,13 +45,21 @@ docker compose -f compose/_hosts/ops-vm.yml --env-file compose/_hosts/ops-vm.env
 
 ## Registry GC
 
-`registry:2` 는 자동 GC 안 함. 주기 (월 1 회) 수동:
+자동 — `registry-gc.timer` (주 1 회 일 04:00) 가 `registry-gc.sh` 실행: repo 별 최신 10 태그만 남기고 (`retention.py`) → `garbage-collect -m` 으로 blob 회수. 설치는 `hosts/ops-vm/README.md`.
 
+상태/수동:
 ```
-docker exec registry registry garbage-collect /etc/docker/registry/config.yml
+systemctl status registry-gc.timer
+sudo systemctl start registry-gc.service          # 즉시 1 회
+journalctl -u registry-gc.service -n 50           # 로그
 ```
 
-retention 정책 (예: keep last 10 tags) 은 별도 스크립트 — 필요 시 추가.
+삭제 전 미리보기 (안전):
+```
+python3 ~/nexus-prime/compose/registry/retention.py --registry-url http://<ops-tailnet-ip>:5000 --keep 10 --dry-run
+```
+
+주의: retention 은 `created` 최신순 N 개를 보존 — **배포에 핀된 sha 태그가 N 밖으로 밀리면 삭제됨.** 빌드 cadence 대비 `keep` (기본 10, `REGISTRY_KEEP` 로 조정) 을 넉넉히. GC 는 push 중 실행 시 race 가능성 있으나 빈도 낮아 허용.
 
 ## Monitoring
 

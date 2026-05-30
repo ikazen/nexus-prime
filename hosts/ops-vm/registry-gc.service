@@ -1,0 +1,9 @@
+[Unit]
+Description=registry 태그 retention + garbage-collect
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=/home/ubuntu/nexus-prime/compose/_hosts/ops-vm.env
+ExecStart=/home/ubuntu/nexus-prime/compose/registry/registry-gc.sh

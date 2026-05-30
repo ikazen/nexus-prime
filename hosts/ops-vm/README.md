@@ -17,6 +17,18 @@ $EDITOR compose/_hosts/ops-vm.env
 docker compose -f compose/_hosts/ops-vm.yml --env-file compose/_hosts/ops-vm.env up -d
 ```
 
+## Registry GC 자동화 (1 회 설치)
+
+repo 별 태그 retention + GC 를 주 1 회 실행 (`runbook.md` 의 Registry GC).
+
+```
+sudo cp hosts/ops-vm/registry-gc.service hosts/ops-vm/registry-gc.timer /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now registry-gc.timer
+```
+
+unit 은 repo 경로를 `/home/ubuntu/nexus-prime` 로 가정 (다르면 unit 의 경로 수정).
+
 ## SSH
 
 `ssh/config.example` 참조 — tailnet IP 또는 MagicDNS alias.
