@@ -21,8 +21,15 @@ host-setup.sh 가 바이너리 설치까지만 함. config 생성 후 활성화 
 ```
 sudo mkdir -p /etc/promtail
 sudo cp ~/nexus-prime/compose/monitoring/promtail-node.yml.example /etc/promtail/promtail.yml
-sudo vi /etc/promtail/promtail.yml  # ${OPS_TAILNET_IP} 실제 값으로 치환
+sudo vi /etc/promtail/promtail.yml  # ${OPS_TAILNET_IP} 실제 값으로 치환 (HOSTNAME 은 자동)
 sudo systemctl enable --now promtail
+```
+
+이미 설치된 경우 config 갱신 후 재시작:
+```
+sudo cp ~/nexus-prime/compose/monitoring/promtail-node.yml.example /etc/promtail/promtail.yml
+sudo vi /etc/promtail/promtail.yml
+sudo systemctl restart promtail
 ```
 
 ## SSH

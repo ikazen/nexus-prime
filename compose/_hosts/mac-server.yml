@@ -1,3 +1,19 @@
 # mac-server 인프라 컨테이너 wrapper. 운영 명령은 compose/_hosts/README.md.
 include:
   - path: ../minio/compose.yml
+
+services:
+  promtail:
+    image: grafana/promtail:3.2.0
+    container_name: promtail
+    command:
+      - -config.file=/etc/promtail/promtail.yml
+      - -config.expand-env=true
+    environment:
+      HOSTNAME: mac-server
+      OPS_TAILNET_IP: ${OPS_TAILNET_IP}
+    volumes:
+      - ../monitoring/promtail-node.yml.example:/etc/promtail/promtail.yml:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+    restart: unless-stopped

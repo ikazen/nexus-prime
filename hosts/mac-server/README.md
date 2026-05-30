@@ -66,9 +66,11 @@ cp hosts/mac-server/launchd/local.node_exporter.plist ~/Library/LaunchAgents/
 launchctl load ~/Library/LaunchAgents/local.node_exporter.plist
 ```
 
-## Promtail (선택)
+## Promtail
 
-Colima VM 안에 docker 가 있어 `/var/lib/docker/containers` 경로가 달라 복잡. 우선순위 낮음 — ops-vm / worker-vm 로그가 대부분 커버. 필요 시 Colima VM 안에서 promtail 실행하거나 `docker_sd_configs` 로 Colima socket 마운트.
+`compose/_hosts/mac-server.yml` 에 포함됨 — MinIO 와 함께 기동.
+
+`mac-server.env` 에 `OPS_TAILNET_IP` 설정 후 compose up 하면 자동 기동. Colima VM 내부에서 `/var/run/docker.sock` 과 `/var/lib/docker/containers` 에 직접 접근하므로 경로 문제 없음.
 
 ## SSH
 
