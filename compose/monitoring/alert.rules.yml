@@ -1,9 +1,8 @@
 groups:
   - name: infra
     rules:
-      # mac-server 는 intermittent — node scrape 제외
       - alert: NodeDown
-        expr: up{job=~"node_.*", job!="node_mac_server"} == 0
+        expr: up{job=~"node_.*"} == 0
         for: 2m
         labels:
           severity: warning
