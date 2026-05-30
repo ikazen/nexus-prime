@@ -47,6 +47,10 @@ services:
     image: prom/statsd-exporter:v0.28.0
     container_name: statsd-exporter
     # airflow 가 nexus network 안에서 UDP 9125 로 직접 전송 — 포트 노출 불필요
+    command:
+      - --statsd.mapping-config=/etc/statsd/mapping.yml
+    volumes:
+      - ./statsd-mapping.yml:/etc/statsd/mapping.yml:ro
     logging:
       driver: json-file
       options:

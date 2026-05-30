@@ -35,3 +35,41 @@ groups:
           severity: warning
         annotations:
           summary: "{{ $labels.host }} 메모리 여유 10% 미만"
+
+  - name: airflow
+    rules:
+      # scheduler 가 heartbeat 를 멈춤 = 플랫폼 정지. 가장 치명적.
+      - alert: SchedulerHeartbeatStopped
+        expr: rate(airflow_scheduler_heartbeat[5m]) == 0
+        for: 3m
+        labels:
+          severity: critical
+        annotations:
+          summary: "airflow scheduler heartbeat 중단 — 플랫폼 정지"
+
+      # 손실 치명적인 일 1회 DAG. 잦은 sync_* 는 다음 발화가 흡수하므로 제외.
+      - alert: DailyMetaDagFailed
+        expr: increase(airflow_dagrun_duration_failed_count{dag_id="daily_meta"}[2h]) > 0
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: "daily_meta DAG run 실패"
+
+      # git push 로 깨진 DAG 배포 시 dag-processor 파싱 실패.
+      - alert: DagImportError
+        expr: airflow_dag_processing_import_errors > 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "DAG import 에러 {{ $value }}건 (깨진 DAG 배포?)"
+
+      # mac 포함 — intermittent 라 sleep 시 fire 가능. alertmanager 에서 repeat_interval 길게.
+      - alert: EdgeWorkerOffline
+        expr: airflow_edge_worker_connected == 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "edge worker {{ $labels.worker_name }} 오프라인"

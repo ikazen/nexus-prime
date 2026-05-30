@@ -11,6 +11,12 @@ route:
         - job="node_mac_server"
       receiver: discord
       repeat_interval: 12h
+    # mac edge worker 는 intermittent — sleep 시 fire 가능하니 길게. worker-vm/ops-vm 은 기본(4h).
+    - matchers:
+        - alertname="EdgeWorkerOffline"
+        - worker_name="mac-server"
+      receiver: discord
+      repeat_interval: 12h
 
 receivers:
   - name: discord

@@ -1,0 +1,13 @@
+# Airflow StatsD → Prometheus 메트릭 이름·라벨 매핑.
+# dag_id 가 이름에 박히는 timer 계열만 라벨로 추출. 나머지(scheduler_heartbeat,
+# dag_processing.import_errors)는 라벨 불필요 → statsd-exporter 기본 변환(점→밑줄).
+# edge_worker.* 는 Airflow 가 influxdb 태그로 emit → statsd-exporter 가 자동으로 라벨화 (규칙 불필요).
+mappings:
+  - match: "airflow.dagrun.duration.failed.*"
+    name: "airflow_dagrun_duration_failed"
+    labels:
+      dag_id: "$1"
+  - match: "airflow.dagrun.duration.success.*"
+    name: "airflow_dagrun_duration_success"
+    labels:
+      dag_id: "$1"
