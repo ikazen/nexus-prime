@@ -65,11 +65,5 @@ groups:
         annotations:
           summary: "DAG import 에러 {{ $value }}건 (깨진 DAG 배포?)"
 
-      # mac 포함 — intermittent 라 sleep 시 fire 가능. alertmanager 에서 repeat_interval 길게.
-      - alert: EdgeWorkerOffline
-        expr: airflow_edge_worker_connected == 0
-        for: 5m
-        labels:
-          severity: warning
-        annotations:
-          summary: "edge worker {{ $labels.worker_name }} 오프라인"
+      # edge worker 오프라인은 호스트 레벨 NodeDown 이 커버 (mac 포함).
+      # edge_worker.connected 는 api-server(uvicorn)가 statsd 미emit + 복구 시 1 미송신이라 알람 부적합.

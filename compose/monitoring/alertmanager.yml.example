@@ -7,14 +7,9 @@ route:
   group_interval: 5m
   repeat_interval: 4h
   routes:
+    # mac 은 intermittent — sleep 시 NodeDown fire 가능하니 repeat 길게. 다른 노드는 기본(4h).
     - matchers:
         - job="node_mac_server"
-      receiver: discord
-      repeat_interval: 12h
-    # mac edge worker 는 intermittent — sleep 시 fire 가능하니 길게. worker-vm/ops-vm 은 기본(4h).
-    - matchers:
-        - alertname="EdgeWorkerOffline"
-        - worker_name="mac-server"
       receiver: discord
       repeat_interval: 12h
 
