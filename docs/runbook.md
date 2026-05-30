@@ -61,6 +61,12 @@ python3 ~/nexus-prime/compose/registry/retention.py --registry-url http://<ops-t
 
 주의: retention 은 `created` 최신순 N 개를 보존 — **배포에 핀된 sha 태그가 N 밖으로 밀리면 삭제됨.** 빌드 cadence 대비 `keep` (기본 5, `REGISTRY_KEEP` 로 조정) 을 넉넉히. GC 는 push 중 실행 시 race 가능성 있으나 빈도 낮아 허용.
 
+빈 repo 껍데기 제거: 오타 등으로 repo 의 태그를 전부 지우면 (retention 은 최신 N 개를 늘 남기므로 이 경우 아님 — 수동 전체삭제일 때만) catalog 에 빈 항목이 남음. blob 은 GC 가 회수하지만 디렉토리는 수동:
+```
+docker exec registry wget -qO- http://localhost:5000/v2/_catalog   # 빈 repo 확인
+docker exec registry rm -rf /var/lib/registry/docker/registry/v2/repositories/<repo>
+```
+
 ## Monitoring
 
 **Prometheus 타겟 확인:**
