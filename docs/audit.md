@@ -36,13 +36,8 @@
 
 ### Gaps
 - **`secrets-backup.md` 와 실제 `.env` 가 manual sync.** 자동 검증 스크립트 없음. 패스워드 1 개 회전하면 양쪽 다 손으로 갱신해야 함. 한쪽만 갱신되면 재구축 시 발견.
-- **외부 의존 셋업이 문서화 안 됨**:
-  - 도메인 (외부 DNS provider) 의 API 토큰 — 어디 가서 어떻게 A 레코드 갱신하는지 없음
-  - Tailscale 계정 (어떤 Google 계정으로 로그인했는지) — 노드 승인 / ACL 편집 어디서
-  - OCI 테넌시 (어떤 이메일·MFA) — API key 분실 시 Console 로 재발급
-  - 이 3 가지는 `secrets-backup.md` 또는 별도 `bootstrap-accounts.md` 에 적어둘 필요
-- **첫 dnsmasq 부트스트랩 chicken-and-egg**: `compose/dnsmasq/compose.yml:4` 가 `image: ${OPS_TAILNET_IP}:5000/dnsmasq:latest` 로 self-host registry 참조. registry 가 먼저 떠야 하고 (그건 OK), 그 다음에 사용자가 손으로 `docker build && docker push` 해야 함. `compose up -d` 한 방 안 됨. runbook 에 적혀는 있지만 (`docs/runbook.md:46-51`) 신규 셋업 흐름 (`docs/setup.md:75`) 에는 빠짐.
-  - **개선**: `compose/dnsmasq/compose.yml` 에 `build: .` 추가하면 registry 의존 제거. 또는 setup.md L5 에 "dnsmasq build 후 push" 단계 추가.
+- ~~**외부 의존 셋업이 문서화 안 됨**~~ — 해소 (2026-05-31): `secrets-backup.md` 에 DNS provider / Tailscale 계정 / OCI 테넌시 이메일·MFA 추가 완료.
+- ~~**첫 dnsmasq 부트스트랩 chicken-and-egg**~~ — 해소 (2026-05-31): `compose/dnsmasq/compose.yml` 에 `build: .` 추가. 첫 셋업 시 로컬 빌드 가능, registry 의존 제거.
 
 ### Recovery 시간 추정 (account 살아있고 secrets-backup.md 만 있을 때)
 - tofu apply (capacity retry 포함): 10 분 ~ N 시간 (A1.Flex capacity 운빨)
@@ -196,7 +191,7 @@
 ### Gaps
 - **OCI 비용/quota dashboard 외부**: Always Free 한도 침해 알림 없음. 현재 한도 내.
 - **로그: mac-server 미수집** — Colima VM 경로 복잡성으로 보류. ops-vm / worker-vm 으로 대부분 커버.
-- **Airflow statsd 메트릭 미연동**: statsd_exporter 가동 중이나 Airflow 측 설정 미완 (airflow-stack 영역).
+- ~~**Airflow statsd 메트릭 미연동**~~ — 해소 (2026-05-31): airflow-stack 측 statsd 설정 완료. airflow 대시보드 provisioning 으로 연동 확인.
 - **Grafana alert 미설정**: Alertmanager 룰은 있으나 Grafana UI alert 미구성.
 
 ---
