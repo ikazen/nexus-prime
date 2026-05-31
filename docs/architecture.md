@@ -16,7 +16,7 @@
 │  Postgres 16    shared DB                                        │
 │  Registry       tailnet IP bind, named volume                    │
 │  Prometheus / Grafana / Alertmanager / Loki / Promtail           │
-│  statsd_exporter / cAdvisor / node_exporter                      │
+│  statsd_exporter / node_exporter                                 │
 └────────────────────┬─────────────────────────────────────────────┘
                      │ Tailscale (MagicDNS / ACL)
                      │ Prometheus ──► node_exporter:9100 (tailnet)
@@ -69,7 +69,7 @@ registry storage 도 ops-vm 부트 디스크 안 (docker named volume). 디스�
 | 호스트 부트스트랩 (swap·Docker·unattended-upgrades) | nexus-prime `hosts/{host}/host-setup.sh` |
 | Caddy / Postgres / Registry 컨테이너 | nexus-prime `compose/{기능}/` |
 | MinIO (data lake, mac-server) | nexus-prime `compose/minio/` |
-| Prometheus / Grafana / statsd_exporter / cAdvisor / node_exporter | nexus-prime `compose/monitoring/` |
+| Prometheus / Grafana / Alertmanager / Loki / Promtail / statsd_exporter / node_exporter | nexus-prime `compose/monitoring/` |
 | airflow control plane (api-server·scheduler·dag-processor) | airflow-stack |
 | airflow edge worker | airflow-stack |
 | DAG / 워크로드 코드 | airflow-stack + 도메인 repo (예: lol-list) |

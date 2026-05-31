@@ -119,28 +119,9 @@ curl -s -X POST "https://grafana.<your-domain>/api/datasources" \
   -d '{"name":"Loki","type":"loki","url":"http://loki:3100","access":"proxy"}'
 ```
 
-**Grafana 대시보드 import (API):**
-```bash
-import_dashboard() {
-  local id=$1
-  curl -s "https://grafana.com/api/dashboards/${id}/revisions/latest/download" -o /tmp/ds_${id}.json
-  python3 - <<EOF
-import json, urllib.request, base64
-d = json.load(open("/tmp/ds_${id}.json")); d.pop("id", None)
-payload = json.dumps({"dashboard": d, "overwrite": True, "folderId": 0,
-  "inputs": [{"name":"DS_PROMETHEUS","type":"datasource","pluginId":"prometheus","value":"Prometheus"}]}).encode()
-headers = {"Content-Type":"application/json",
-  "Authorization":"Basic "+base64.b64encode(b"admin:<GRAFANA_ADMIN_PASSWORD>").decode()}
-req = urllib.request.Request("https://grafana.<your-domain>/api/dashboards/import",
-  data=payload, headers=headers, method="POST")
-r = json.load(urllib.request.urlopen(req))
-print(r.get("status"), r.get("title"), r.get("importedUrl",""))
-EOF
-}
-
-import_dashboard 1860   # Node Exporter Full (호스트 메트릭)
-import_dashboard 14282  # cAdvisor Exporter (컨테이너 메트릭)
-```
+**Grafana 대시보드:** `compose/monitoring/grafana/provisioning/dashboards/` 경로로 자동 provisioning. 스택 기동 후 별도 import 불필요.
+- nexus-overview: 호스트 메트릭 + 디스크
+- airflow: scheduler/executor/pool/triggerer/task 결과
 
 ## 7. airflow workload
 

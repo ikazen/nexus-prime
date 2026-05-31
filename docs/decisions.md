@@ -32,7 +32,7 @@
 | R1 | Auth manager (Caddy 뒤 airflow `SimpleAuthManager`) | 다중 사용자 / RBAC, UI 노출 표면 확대 | `FabAuthManager` (airflow-stack 측 결정) |
 | R2 | registry 외부 노출 X (tailnet IP bind only) | 외부 CI / 다른 노드에서 push 필요 | Caddy 뒤 `registry.<your-domain>` + basic auth |
 | R3 | tofu state = 로컬 (`.tfstate` gitignore + password manager 백업) | 다중 운영자 / 협업 | OCI Object Storage backend |
-| R4 | **도입됨 (2026-05-27)**. Grafana + Prometheus + Loki + Promtail + Alertmanager + node_exporter×3 + statsd_exporter + cAdvisor. `compose/monitoring/`. Grafana 자체 로그인 | — | — |
+| R4 | **도입됨 (2026-05-27)**. Grafana + Prometheus + Loki + Promtail + Alertmanager + node_exporter×3 + statsd_exporter. `compose/monitoring/`. Grafana 자체 로그인. 대시보드는 provisioning (`grafana/dashboards/*.json`). cAdvisor 는 도입했다 제거 (2026-05-31): 이 호스트 docker API 조회 불가(`DockerVersion` 빈값)로 컨테이너 메트릭 미수집 — node_exporter/Loki 로 갈음 | — | — |
 | R5 | **부분 도입됨**. MinIO on mac-server 가동 (`compose/minio/`). dbt-core / Metabase / Redpanda 미도입 — 트리거 시 도입 | data팀 표준 도구 학습 필요 | airflow worker image 에 `dbt-core+dbt-postgres` + Cosmos, 신규 schema 분리 |
 | R6 | oauth2-proxy 로 `*.internal` SSO — 미도입 | tailnet 다중 사용자 또는 internal 서비스 5+ | Caddy `forward_auth oauth2-proxy:4180`, GitHub OAuth |
 
