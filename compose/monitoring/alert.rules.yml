@@ -10,7 +10,7 @@ groups:
           summary: "{{ $labels.host }} node_exporter 응답 없음"
 
       - alert: ServiceDown
-        expr: up{job=~"cadvisor|statsd"} == 0
+        expr: up{job="statsd"} == 0
         for: 2m
         labels:
           severity: warning

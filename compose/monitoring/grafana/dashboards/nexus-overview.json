@@ -159,28 +159,6 @@
         "overrides": []
       },
       "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "multi" } }
-    },
-    {
-      "id": 8,
-      "type": "timeseries",
-      "title": "컨테이너 재시작 (1h) — 크래시 루프 감지",
-      "datasource": { "type": "prometheus", "uid": "bfnc68nag9p8ga" },
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 12 },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "changes(container_start_time_seconds{name=~\".+\"}[1h])",
-          "legendFormat": "{{name}}"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "custom": { "drawStyle": "bars", "fillOpacity": 60, "showPoints": "never" }
-        },
-        "overrides": []
-      },
-      "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "multi" } }
     }
   ]
 }
