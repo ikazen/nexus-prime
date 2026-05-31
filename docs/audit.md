@@ -15,7 +15,7 @@
 | 3 | 보안 | B  | 공인 표면 최소. 내부 (registry/registry-ui/postgres) 무인증 = tailnet 신뢰 |
 | 4 | 공개 repo 안전성 | A | L14 위반 전부 해소. git history filter-repo 로 정리 완료 |
 | 5 | 확장성 | A- | `compose/<svc>/ + include + Caddyfile + *.internal` 패턴 깔끔. 단 single-host bottleneck |
-| 6 | 현재 상태 가시성 | B+ | 모니터링 스택(Prometheus+Grafana+Loki) 가동, 대시보드 2개 import. scripts/status.sh 추가 |
+| 6 | 현재 상태 가시성 | B+ | 모니터링 스택(Prometheus+Grafana+Loki+Alertmanager) 가동, 대시보드 provisioning 자동. scripts/status.sh 추가 |
 | 7 | 신규 서비스 추가 | B+ | 결합점 (nexus / postgres / registry / *.internal) 명확. 단 example template 부재 |
 | 8 | IaC 준수 | A- | drift 0, lock 파일 commit, import 절차 완비. state remote backend 미도입 (R3 이미 인지) |
 
