@@ -184,11 +184,11 @@
 - `docs/architecture.md` — 토폴로지 ASCII + OCI 자원 표 + 책임 분리 표. 1 분 이해 가능.
 - `docs/decisions.md` — L1~L18 잠긴 결정 + R1~R3 재고 가능 결정. 신규 PR 시 의사결정 기준.
 - `docs/runbook.md` — 일상 운영 절차. 인스턴스 재설치 / DB 추가 / registry / Caddy / Tailscale / colima 자원 등.
-- **모니터링 스택 (R4) 가동** — Prometheus + Grafana + Loki + Alertmanager + cAdvisor + node_exporter (3 노드)
-  - ops-vm: Prometheus scrape 5 타겟 all up, Loki 7d retention, Promtail 컨테이너 로그 수집
+- **모니터링 스택 (R4) 가동** — Prometheus + Grafana + Loki + Alertmanager + statsd_exporter + node_exporter (3 노드). cAdvisor 는 제거 (DockerVersion 빈값으로 컨테이너 메트릭 미수집 — node_exporter/Loki 로 갈음)
+  - ops-vm: Prometheus scrape all up, Loki 7d retention, Promtail 컨테이너 로그 수집
   - worker-vm: node_exporter + promtail systemd 가동
   - mac-server: node_exporter LaunchAgent 가동
-  - Grafana: Node Exporter Full (1860) + cAdvisor Exporter (14282) 대시보드 import 완료
+  - Grafana: nexus-overview + airflow 대시보드 provisioning 자동 배포
   - Alertmanager: Discord webhook, NodeDown / ServiceDown / DiskLow / MemLow 룰
 - `scripts/status.sh` — tofu plan + docker compose ps + tailscale status 한 방
 - caddy / registry / dnsmasq healthcheck 추가 → `compose ps` 에서 상태 즉시 확인
@@ -271,7 +271,7 @@
 | ~~P2~~ | ~~TERMINATED boot volume 2 개 삭제~~ | ~~정리~~ | 완료 |
 | ~~P2~~ | ~~caddy/registry/dnsmasq healthcheck 추가~~ | ~~compose ps 상태~~ | 완료 |
 | ~~P2~~ | ~~`tofu/terraform.tfstate.backup` 백업 대상 runbook 명시~~ | ~~state 관리~~ | 완료 |
-| ~~R4~~ | ~~monitoring 스택 (Prometheus+Grafana+Loki+Alertmanager+node_exporter×3+cAdvisor)~~ | ~~가시성~~ | 완료 |
+| ~~R4~~ | ~~monitoring 스택 (Prometheus+Grafana+Loki+Alertmanager+node_exporter×3+statsd_exporter)~~ | ~~가시성~~ | 완료 |
 | ~~P1~~ | ~~`secrets-backup.md` 의 외부 계정 정보 (DNS provider / Tailscale account / OCI 테넌시 이메일+MFA) 추가~~ | ~~신규 재구축 시 외부 의존 셋업 단계 부재~~ | 완료 |
 | P3 | OCI API key rotation routine (분기 1 회 fingerprint 갱신) | 장기 살아있는 key 위험 | routine 추가 |
 | ~~P3~~ | ~~신규 서비스 추가 체크리스트~~ | ~~신규 서비스 추가자 onboarding~~ | 완료 (`docs/runbook.md`) |
