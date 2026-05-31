@@ -84,6 +84,10 @@ services:
     image: gcr.io/cadvisor/cadvisor:v0.50.0
     container_name: cadvisor
     privileged: true
+    # disk 끄기: cgroup v2 + overlay2 에서 writable-layer ID 조회 실패로 컨테이너 등록 자체가 깨짐.
+    # per-container 디스크는 포기 (호스트 디스크는 node_exporter). CPU/메모리/network/name 은 정상화.
+    command:
+      - --disable_metrics=disk
     volumes:
       - /:/rootfs:ro
       - /var/run:/var/run:ro
