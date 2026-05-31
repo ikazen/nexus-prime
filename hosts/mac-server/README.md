@@ -72,6 +72,42 @@ launchctl load ~/Library/LaunchAgents/local.node_exporter.plist
 
 `mac-server.env` 에 `OPS_TAILNET_IP` 설정 후 compose up 하면 자동 기동. Colima VM 내부에서 `/var/run/docker.sock` 과 `/var/lib/docker/containers` 에 직접 접근하므로 경로 문제 없음.
 
+## rclone MinIO 마운트
+
+MinIO 버킷을 로컬 디렉터리로 마운트. 마운트 경로와 버킷명은 `rclone-minio-mount.sh` 상단 변수에서 변경.
+
+**사전 설치**
+
+```bash
+brew install --cask macfuse   # FUSE 드라이버, 설치 후 재부팅 필요
+brew install rclone
+```
+
+**rclone 설정**
+
+```bash
+rclone config
+# New remote → name: minio
+# Storage: s3 → provider: Minio
+# Access key / Secret key: mac-server.env 의 MINIO_ROOT_USER / PASSWORD
+# Endpoint: http://localhost:9000
+# 나머지 기본값
+```
+
+**버킷 생성**
+
+MinIO Console (`http://localhost:9001`) 에서 버킷 생성 (기본값: `models`).
+
+**LaunchAgent 등록**
+
+```bash
+cp hosts/mac-server/launchd/local.rclone-minio.plist ~/Library/LaunchAgents/
+# ${HOME} 보간 문제 → plist 안 경로를 절대경로로 수정 후 로드 (위 plist 의 ${HOME} 보간 참조)
+launchctl load ~/Library/LaunchAgents/local.rclone-minio.plist
+```
+
+확인: `ls ~/minio/models`
+
 ## SSH
 
 `ssh/config.example` 참조.
