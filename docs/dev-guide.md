@@ -75,6 +75,39 @@ docker pull registry.internal/<name>:<tag>
 - **Console**: `http://minio-console.internal`
 - **자격증명**: `secrets-backup.md` 참조
 
+### 버킷 + Access Key 발급
+
+1. `http://minio-console.internal` 접속
+2. **Buckets** → Create Bucket → 버킷명 지정
+3. **Access Keys** → Create Access Key → 저장 (재조회 불가)
+
+### macOS 로컬 마운트 (rclone)
+
+tailnet 연결 상태에서 진행.
+
+```bash
+# 1. 설치
+brew install rclone
+
+# 2. remote 설정 (MinIO 서버당 1회)
+rclone config
+# → n → 이름: minio
+# → Storage: s3 → Provider: Minio
+# → access_key_id / secret_access_key 입력
+# → endpoint: http://minio.internal
+# → 나머지 기본값 (Enter)
+
+# 3. 마운트 — 버킷마다 경로 지정, remote 설정 재사용
+mkdir -p ~/mnt/<버킷명>
+rclone mount minio:<버킷명> ~/mnt/<버킷명> --vfs-cache-mode writes --daemon
+
+# 여러 버킷 동시 마운트 가능
+rclone mount minio:<버킷2> ~/mnt/<버킷2> --vfs-cache-mode writes --daemon
+
+# 4. 언마운트
+umount ~/mnt/<버킷명>
+```
+
 ## Postgres DB 발급
 
 ops-vm SSH 접속 후 실행:
