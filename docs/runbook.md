@@ -114,6 +114,29 @@ sudo tailscale up --ssh
 
 ops-vm public IP 가 바뀌면 (인스턴스 재생성 등) 외부 DNS 의 `airflow.<your-domain>` A 레코드 갱신. reserved IP 라 보통 안 바뀜.
 
+## mac-server 재부팅
+
+재부팅 전 edge-worker를 먼저 내려야 한다. 그냥 재부팅하면 Airflow DB에 `starting` 상태가 잔류해 재시작 루프에 빠짐.
+
+```bash
+ssh mac-server
+cd ~/projects/airflow-stack   # edge-worker compose 위치
+docker compose stop edge-worker
+# 이후 재부팅
+```
+
+재부팅 후 Colima·MinIO는 LaunchAgent / `restart: unless-stopped` 로 자동 복구. edge-worker도 자동 재시작됨.
+
+**edge-worker가 재시작 루프에 빠진 경우 복구:**
+```bash
+# ops-vm에서 DB 상태 강제 변경 후 제거
+docker exec postgres psql -U airflow -d airflow -c "UPDATE edge_worker SET state='offline' WHERE worker_name='mac-server';"
+docker exec ops-vm-api-server-1 airflow edge remove-remote-edge-worker -H mac-server
+
+# mac-server에서 컨테이너 재생성 (PID 파일 초기화)
+ssh mac-server "cd ~/projects/airflow-stack && docker compose down edge-worker && docker compose up -d edge-worker"
+```
+
 ## colima 자원 변경 (mac-server)
 
 ```
