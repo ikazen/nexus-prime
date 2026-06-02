@@ -114,6 +114,29 @@ sudo tailscale up --ssh
 
 ops-vm public IP 가 바뀌면 (인스턴스 재생성 등) 외부 DNS 의 `airflow.<your-domain>` A 레코드 갱신. reserved IP 라 보통 안 바뀜.
 
+## mac-server 슬립 방지 설정
+
+macOS 업데이트 후 전원 설정이 초기화될 수 있다. 업데이트·재설치 후 반드시 확인.
+
+**현재 설정 확인:**
+```bash
+pmset -g | grep -E 'sleep|standby|hibernate|disksleep'
+# sleep 0, standby 0, hibernatemode 0, disksleep 0 이어야 함
+```
+
+**재적용 (초기화된 경우):**
+```bash
+sudo pmset -a sleep 0 standby 0 hibernatemode 0 disksleep 0
+```
+
+**부팅 시 자동 적용 (LaunchDaemon — 최초 1회 설치):**
+```bash
+sudo cp ~/projects/nexus-prime/hosts/mac-server/launchd/local.pmset-nosleep.plist /Library/LaunchDaemons/
+sudo launchctl load /Library/LaunchDaemons/local.pmset-nosleep.plist
+```
+
+LaunchDaemon은 root로 부팅 시 실행되므로 OS 업데이트 후에도 자동 재적용된다.
+
 ## mac-server 재부팅
 
 재부팅 전 edge-worker를 먼저 내려야 한다. 그냥 재부팅하면 Airflow DB에 `starting` 상태가 잔류해 재시작 루프에 빠짐.
