@@ -27,6 +27,15 @@ groups:
         annotations:
           summary: "{{ $labels.host }} 디스크 여유 20% 미만"
 
+      - alert: CpuHigh
+        expr: >
+          100 - avg by(host) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100 > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.host }} CPU 80% 초과"
+
       - alert: MemoryLow
         expr: >
           node_memory_MemAvailable_bytes{job=~"node_ops_vm|node_worker_vm"}
