@@ -30,19 +30,19 @@ groups:
       - alert: MemoryLow
         expr: >
           node_memory_MemAvailable_bytes{job=~"node_ops_vm|node_worker_vm"}
-          / node_memory_MemTotal_bytes{job=~"node_ops_vm|node_worker_vm"} < 0.1
+          / node_memory_MemTotal_bytes{job=~"node_ops_vm|node_worker_vm"} < 0.2
         for: 5m
         labels:
           severity: warning
         annotations:
-          summary: "{{ $labels.host }} 메모리 여유 10% 미만"
+          summary: "{{ $labels.host }} 메모리 여유 20% 미만"
 
       - alert: MemoryLowMac
         expr: >
           (node_memory_free_bytes{job="node_mac_server"}
           + node_memory_inactive_bytes{job="node_mac_server"}
           + node_memory_purgeable_bytes{job="node_mac_server"})
-          / node_memory_total_bytes{job="node_mac_server"} < 0.1
+          / node_memory_total_bytes{job="node_mac_server"} < 0.2
         for: 5m
         labels:
           severity: warning
