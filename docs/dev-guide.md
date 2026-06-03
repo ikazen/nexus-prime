@@ -85,27 +85,71 @@ docker pull registry.internal/<name>:<tag>
 
 tailnet 연결 상태에서 진행.
 
+**사전 요구사항**
+
+- macFUSE 설치: `brew install --cask macfuse`
+  - 설치 후 시스템 설정 → 개인 정보 보호 및 보안 → "확인된 개발자가 배포한 커널 확장 프로그램의 사용자 관리 허용" 켜기 → 재부팅
+- rclone 공식 바이너리 설치 (Homebrew 버전은 mount 미지원):
+  ```bash
+  curl https://rclone.org/install.sh | sudo bash
+  ```
+
+**remote 설정 (MinIO 서버당 1회)**
+
+`~/.config/rclone/rclone.conf` 에 직접 추가:
+
+```ini
+[minio]
+type = s3
+provider = Other
+access_key_id = <access-key>
+secret_access_key = <secret-key>
+endpoint = http://minio.internal
+```
+
+**마운트 — 버킷마다 경로 지정, remote 설정 재사용**
+
 ```bash
-# 1. 설치
-brew install rclone
-
-# 2. remote 설정 (MinIO 서버당 1회)
-rclone config
-# → n → 이름: minio
-# → Storage: s3 → Provider: Minio
-# → access_key_id / secret_access_key 입력
-# → endpoint: http://minio.internal
-# → 나머지 기본값 (Enter)
-
-# 3. 마운트 — 버킷마다 경로 지정, remote 설정 재사용
 mkdir -p ~/mnt/<버킷명>
-rclone mount minio:<버킷명> ~/mnt/<버킷명> --vfs-cache-mode writes --daemon
+rclone mount minio:<버킷명> ~/mnt/<버킷명> --vfs-cache-mode writes --dir-cache-time 10s --daemon
 
 # 여러 버킷 동시 마운트 가능
-rclone mount minio:<버킷2> ~/mnt/<버킷2> --vfs-cache-mode writes --daemon
+rclone mount minio:<버킷2> ~/mnt/<버킷2> --vfs-cache-mode writes --dir-cache-time 10s --daemon
 
-# 4. 언마운트
+# 언마운트
 umount ~/mnt/<버킷명>
+```
+
+**재부팅 후 자동 마운트 (LaunchAgent)**
+
+```bash
+cat > ~/Library/LaunchAgents/com.rclone.minio.<버킷명>.plist << 'EOF'
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.rclone.minio.<버킷명></string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/local/bin/rclone</string>
+        <string>mount</string>
+        <string>minio:<버킷명></string>
+        <string>/Users/<your-username>/mnt/<버킷명></string>
+        <string>--vfs-cache-mode</string>
+        <string>writes</string>
+        <string>--dir-cache-time</string>
+        <string>10s</string>
+    </array>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+</dict>
+</plist>
+EOF
+
+launchctl load ~/Library/LaunchAgents/com.rclone.minio.<버킷명>.plist
 ```
 
 ## Postgres DB 발급
