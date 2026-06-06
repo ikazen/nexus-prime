@@ -26,6 +26,28 @@ ops-vm reserved IP 는 유지 (별도 리소스). 인스턴스 재생성 시 새
 
 개발자용 절차 → `docs/dev-guide.md` 참조.
 
+## MinIO 버킷 anonymous 오픈
+
+버킷을 자격증명 없이 접근 가능하게 설정한다 (tailnet 내부 전용).
+
+```bash
+ssh mac-server
+~/mc anonymous set public local/<bucket>   # read+write 공개
+~/mc anonymous get local/<bucket>           # 확인 → public
+```
+
+읽기만 허용하려면 `public` 대신 `download`.
+
+취소:
+```bash
+~/mc anonymous set none local/<bucket>
+```
+
+`mc` alias `local`은 `localhost:9000` (minioadmin)으로 등록되어 있다. 초기화된 경우:
+```bash
+~/mc alias set local http://localhost:9000 minioadmin <password>
+```
+
 ## 내부 DNS (dnsmasq)
 
 `*.internal` → ops-vm tailnet IP 로 해석. tailnet 내 어디서든 `registry.internal`, `rover.internal` 등으로 접근 가능.
