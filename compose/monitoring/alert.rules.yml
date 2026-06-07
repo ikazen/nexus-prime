@@ -29,7 +29,16 @@ groups:
 
       - alert: CpuHigh
         expr: >
-          100 - avg by(host) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100 > 80
+          100 - avg by(host) (rate(node_cpu_seconds_total{mode="idle",job=~"node_worker_vm|node_mac_server"}[5m])) * 100 > 90
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.host }} CPU 90% 초과"
+
+      - alert: CpuHighOpsVm
+        expr: >
+          100 - avg by(host) (rate(node_cpu_seconds_total{mode="idle",job="node_ops_vm"}[5m])) * 100 > 80
         for: 5m
         labels:
           severity: warning
