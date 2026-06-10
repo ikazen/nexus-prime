@@ -20,6 +20,7 @@
 | Alertmanager | ops-vm | `alertmanager:9093` | — | — | 없음 | Prometheus alert 라우팅 |
 | statsd-exporter | ops-vm | `statsd-exporter:9125/udp` | — | — | 없음 | nexus 안에서 UDP push → Prometheus scrape |
 | node-exporter | 3 노드 모두 | ops-vm: nexus 안 / worker·mac: `:9100` tailnet 직결 | — | — | 없음 | Prometheus 가 tailnet 으로 scrape |
+| Neo4j | ops-vm | `neo4j:7474` (HTTP) | `http://neo4j.internal` | — | neo4j/pw | bolt: `<OPS_TAILNET_IP>:7687` 직결 |
 | Caddy edge | ops-vm | — | — | 443 | — | 모든 외부 라우팅 진입점 |
 
 **dnsmasq / promtail 은 인프라 plumbing — 워크로드가 직접 호출하지 않음.**

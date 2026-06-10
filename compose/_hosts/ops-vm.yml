@@ -6,3 +6,4 @@ include:
   - path: ../registry-ui/compose.yml
   - path: ../dnsmasq/compose.yml
   - path: ../monitoring/compose.yml
+  - path: ../neo4j/compose.yml
