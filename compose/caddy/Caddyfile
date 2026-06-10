@@ -19,6 +19,10 @@ http://prometheus.internal {
     reverse_proxy prometheus:9090
 }
 
+http://neo4j.internal {
+    reverse_proxy neo4j:7474
+}
+
 http://registry.internal {
     reverse_proxy registry:5000
 }

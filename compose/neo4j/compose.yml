@@ -1,0 +1,35 @@
+services:
+  neo4j:
+    image: neo4j:5
+    container_name: neo4j
+    environment:
+      NEO4J_AUTH: neo4j/${NEO4J_PASSWORD}
+      NEO4J_server_memory_heap_initial__size: "512m"
+      NEO4J_server_memory_heap_max__size: "1g"
+      NEO4J_server_memory_pagecache_size: "512m"
+    ports:
+      # bolt — tailnet 직결 (driver 접속). HTTP browser 는 Caddy 경유.
+      - "${OPS_TAILNET_IP}:7687:7687"
+    volumes:
+      - neo4j-data:/data
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:7474"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "3"
+    networks:
+      - nexus
+    restart: unless-stopped
+
+volumes:
+  neo4j-data:
+
+networks:
+  nexus:
+    external: true
