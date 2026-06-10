@@ -24,7 +24,7 @@
 | L16 | OpenTofu IaC + 기존 리소스 전부 import | 코드 = 실제 환경 일치. drift 0 보장. 리소스 매트릭스 작음 (~15) |
 | L17 | 기능 중심 디렉토리 layout (`compose/{기능}/` + `_hosts/` wrapper) | 호스트 disposable·기능 영속. scale·라이프사이클 분리 자연스러움 |
 | L18 | 인스턴스 = immutable. 변경·복구 = destroy + create (in-place 변경 안 함) | minimal·disposable (L7) 와 같은 사상. drift 0, 변경 vs 복구 절차 통일, MTTR ≈ MTTC (capacity 잡는 시간). 데이터 손실 OK — airflow 메타 / registry storage 모두 disposable, lol-list 데이터는 Supabase 외부 |
-| L19 | Neo4j Community on ops-vm. bolt :7687 tailnet IP bind, HTTP browser Caddy 경유 (`http://neo4j.internal`). heap 512m→1g, pagecache 512m | 그래프 데이터 모델 필요. Community 무료, 단일 노드 적합. ops-vm 12GB 공유 환경이므로 메모리 상한 명시. L7 (백업 없음) 동일 적용 — neo4j-data volume disposable |
+| L19 | Neo4j Community on ops-vm. bolt :7687 tailnet IP bind, HTTP browser Caddy 경유 (`http://neo4j.internal`). heap 512m→1500m, pagecache 2g (~4GB RSS) | 그래프 데이터 모델 필요. Community 무료, 단일 노드 적합. ops-vm 12GB 공유 환경이므로 메모리 상한 명시. L7 (백업 없음) 동일 적용 — neo4j-data volume disposable |
 
 ## 재고 가능 결정
 
