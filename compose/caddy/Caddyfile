@@ -31,6 +31,14 @@ http://registry-ui.internal {
     reverse_proxy registry-ui:80
 }
 
+http://rondo-api.internal {
+    reverse_proxy host.docker.internal:8000
+}
+
+http://rondo-dashboard.internal {
+    reverse_proxy host.docker.internal:8501
+}
+
 {$AIRFLOW_DOMAIN} {
     header {
         Strict-Transport-Security "max-age=31536000"
