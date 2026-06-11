@@ -32,11 +32,11 @@ http://registry-ui.internal {
 }
 
 http://rondo-api.internal {
-    reverse_proxy host.docker.internal:8000
+    reverse_proxy rondo-daemon:8000
 }
 
 http://rondo-dashboard.internal {
-    reverse_proxy host.docker.internal:8501
+    reverse_proxy rondo-dashboard:8501
 }
 
 {$AIRFLOW_DOMAIN} {
