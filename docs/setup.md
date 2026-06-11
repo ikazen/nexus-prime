@@ -134,3 +134,34 @@ curl -s -X POST "https://grafana.<your-domain>/api/datasources" \
 - Postgres password / user — `compose/_hosts/ops-vm.env`
 - Airflow Fernet / JWT — airflow-stack 의 `.env`
 - Tailscale auth key (재가입 시) — password manager
+
+## 9. ops-vm Docker DNS (`*.internal` 컨테이너 내 해석)
+
+Docker 컨테이너는 호스트의 dnsmasq를 사용하지 않아 기본적으로 `*.internal` 도메인을 해석할 수 없다.
+dnsmasq를 docker0 브리지에서도 수신하게 하고 Docker daemon이 이를 DNS로 사용하도록 설정한다.
+이 설정 없이 컨테이너 내에서 `minio.internal` 등을 직접 IP로 대체해야 하는 문제가 생긴다.
+
+```bash
+# ops-vm에서 실행
+
+# 1. docker0 브리지 IP 확인 (보통 172.17.0.1)
+ip -4 addr show docker0 | grep inet | awk '{print $2}' | cut -d/ -f1
+
+# 2. dnsmasq가 docker0 브리지에서도 수신하도록 설정
+echo "interface=docker0" | sudo tee /etc/dnsmasq.d/docker.conf
+sudo systemctl restart dnsmasq
+
+# 3. Docker daemon DNS 설정 (위에서 확인한 IP로)
+sudo tee /etc/docker/daemon.json > /dev/null <<'EOF'
+{
+  "dns": ["172.17.0.1"]
+}
+EOF
+
+# 4. Docker 재시작 (실행 중 컨테이너 전부 재시작됨)
+sudo systemctl restart docker
+
+# 5. 확인
+docker run --rm busybox nslookup minio.internal
+# Address: 100.x.x.x 가 나오면 정상
+```
