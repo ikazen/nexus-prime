@@ -22,6 +22,36 @@
 
 ops-vm reserved IP 는 유지 (별도 리소스). 인스턴스 재생성 시 새 vnic 에 자동 attach.
 
+## Secrets 관리 (SOPS + age)
+
+암호화본 `*.enc.env` 는 git에 커밋. 평문 `*.env` 는 로컬·ops-vm 에만. age 개인키는 Bitwarden 보관.
+
+**복호화 (수동):**
+```bash
+ssh ops-vm
+cd ~/nexus-prime
+sops --input-type dotenv --output-type dotenv -d compose/_hosts/ops-vm.enc.env > compose/_hosts/ops-vm.env
+```
+
+배포 시(`deploy-ops-vm.sh`)는 자동으로 위 복호화 단계가 실행됨.
+
+**env 값 변경 후 재암호화:**
+```bash
+# ops-vm에서
+cd ~/nexus-prime
+# ops-vm.env 수정 후:
+sops --input-type dotenv --output-type dotenv -e compose/_hosts/ops-vm.env > compose/_hosts/ops-vm.enc.env
+# 로컬에서 scp로 가져와 커밋
+scp ops-vm:~/nexus-prime/compose/_hosts/ops-vm.enc.env compose/_hosts/ops-vm.enc.env
+git add compose/_hosts/ops-vm.enc.env && git commit -m "chore: update ops-vm secrets"
+```
+
+**새 머신 복구 시 (age 개인키 없는 상태):**
+1. Bitwarden에서 age 개인키 복원
+2. `mkdir -p ~/.config/sops/age && echo "<private_key>" > ~/.config/sops/age/keys.txt`
+3. `chmod 600 ~/.config/sops/age/keys.txt`
+4. 이후 복호화 정상 동작
+
 ## 신규 서비스 추가 / Registry / MinIO / Postgres DB 발급
 
 개발자용 절차 → `docs/dev-guide.md` 참조.

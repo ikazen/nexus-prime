@@ -66,11 +66,17 @@ mac-server 는 macOS 라 host-setup.sh 가 아니라 `hosts/mac-server/README.md
 
 ## 5. ops-vm 인프라 컨테이너
 
-```
+```bash
 ssh ops-vm
 cd nexus-prime
-cp compose/_hosts/ops-vm.env.example compose/_hosts/ops-vm.env
-$EDITOR compose/_hosts/ops-vm.env   # POSTGRES_*, OPS_TAILNET_IP, AIRFLOW_DOMAIN
+
+# age 개인키 복원 (Bitwarden에서)
+mkdir -p ~/.config/sops/age
+echo "<age_private_key>" > ~/.config/sops/age/keys.txt
+chmod 600 ~/.config/sops/age/keys.txt
+
+# secrets 복호화
+sops --input-type dotenv --output-type dotenv -d compose/_hosts/ops-vm.enc.env > compose/_hosts/ops-vm.env
 
 # dnsmasq 이미지 빌드 (최초 셋업 시 registry 없음 — 로컬 빌드)
 docker compose -f compose/_hosts/ops-vm.yml --env-file compose/_hosts/ops-vm.env build dnsmasq
@@ -129,11 +135,11 @@ curl -s -X POST "https://grafana.<your-domain>/api/datasources" \
 
 ## 8. secrets
 
-`.env` 는 어디서도 git commit 금지. 실제 값은 password manager / secrets vault.
+암호화본 `compose/_hosts/ops-vm.enc.env` 는 git에 있음. 평문 `*.env` 는 git 금지.
 
-- Postgres password / user — `compose/_hosts/ops-vm.env`
-- Airflow Fernet / JWT — airflow-stack 의 `.env`
-- Tailscale auth key (재가입 시) — password manager
+- age 개인키 — Bitwarden 보관. 복구 절차는 `docs/runbook.md` "Secrets 관리" 참조
+- Airflow Fernet / JWT — airflow-stack 의 `.env` (해당 repo 관리)
+- Tailscale auth key (재가입 시) — Bitwarden
 
 ## 9. ops-vm Docker DNS (`*.internal` 컨테이너 내 해석)
 

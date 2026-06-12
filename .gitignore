@@ -1,8 +1,9 @@
-# secrets — 실제 값은 password manager
+# secrets — 실제 값은 password manager. 암호화본(*.enc.env)은 commit
 .env
 *.env
 !.env.example
 !*.env.example
+!*.enc.env
 
 # OpenTofu
 *.tfstate
