@@ -299,28 +299,122 @@
       }
     },
     {
-      "id": 7,
+      "id": 100,
       "type": "timeseries",
-      "title": "DAG run 완료 rate (성공 / 실패) — run 완료 시 채워짐",
+      "title": "DAG run 완료 rate — rondo",
       "datasource": {
         "type": "prometheus",
         "uid": "bfnc68nag9p8ga"
       },
       "gridPos": {
         "h": 8,
-        "w": 12,
+        "w": 8,
         "x": 0,
         "y": 12
       },
       "targets": [
         {
           "refId": "A",
-          "expr": "rate(airflow_dagrun_duration_success_count[15m])",
+          "expr": "sum(rate(airflow_dagrun_duration_success_count{dag_id=~\"reflexion_rondo.*\"}[15m]))",
           "legendFormat": "success"
         },
         {
           "refId": "B",
-          "expr": "rate(airflow_dagrun_duration_failed_count[15m])",
+          "expr": "sum(rate(airflow_dagrun_duration_failed_count{dag_id=~\"reflexion_rondo.*\"}[15m]))",
+          "legendFormat": "failure"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "showPoints": "auto"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 101,
+      "type": "timeseries",
+      "title": "DAG run 완료 rate — lck-pics",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "bfnc68nag9p8ga"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 12
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(airflow_dagrun_duration_success_count{dag_id=~\"daily_meta|sync_matches|sync_secondary\"}[15m]))",
+          "legendFormat": "success"
+        },
+        {
+          "refId": "B",
+          "expr": "sum(rate(airflow_dagrun_duration_failed_count{dag_id=~\"daily_meta|sync_matches|sync_secondary\"}[15m]))",
+          "legendFormat": "failure"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "showPoints": "auto"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 102,
+      "type": "timeseries",
+      "title": "DAG run 완료 rate — ops",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "bfnc68nag9p8ga"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 12
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(airflow_dagrun_duration_success_count{dag_id=~\"maintenance|test_environment\"}[15m]))",
+          "legendFormat": "success"
+        },
+        {
+          "refId": "B",
+          "expr": "sum(rate(airflow_dagrun_duration_failed_count{dag_id=~\"maintenance|test_environment\"}[15m]))",
           "legendFormat": "failure"
         }
       ],
