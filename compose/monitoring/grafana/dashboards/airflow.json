@@ -315,12 +315,12 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(rate(airflow_dagrun_duration_success_count{dag_id=~\"reflexion_rondo.*\"}[15m]))",
+          "expr": "sum(increase(airflow_dagrun_duration_success_count{dag_id=~\"reflexion_rondo.*\"}[1h]))",
           "legendFormat": "success"
         },
         {
           "refId": "B",
-          "expr": "sum(rate(airflow_dagrun_duration_failed_count{dag_id=~\"reflexion_rondo.*\"}[15m]))",
+          "expr": "sum(increase(airflow_dagrun_duration_failed_count{dag_id=~\"reflexion_rondo.*\"}[1h]))",
           "legendFormat": "failure"
         }
       ],
@@ -362,12 +362,12 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(rate(airflow_dagrun_duration_success_count{dag_id=~\"daily_meta|sync_matches|sync_secondary\"}[15m]))",
+          "expr": "sum(increase(airflow_dagrun_duration_success_count{dag_id=~\"daily_meta|sync_matches|sync_secondary\"}[1h]))",
           "legendFormat": "success"
         },
         {
           "refId": "B",
-          "expr": "sum(rate(airflow_dagrun_duration_failed_count{dag_id=~\"daily_meta|sync_matches|sync_secondary\"}[15m]))",
+          "expr": "sum(increase(airflow_dagrun_duration_failed_count{dag_id=~\"daily_meta|sync_matches|sync_secondary\"}[1h]))",
           "legendFormat": "failure"
         }
       ],
@@ -409,12 +409,12 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(rate(airflow_dagrun_duration_success_count{dag_id=~\"maintenance|test_environment\"}[15m]))",
+          "expr": "sum(increase(airflow_dagrun_duration_success_count{dag_id=~\"maintenance|test_environment\"}[1h]))",
           "legendFormat": "success"
         },
         {
           "refId": "B",
-          "expr": "sum(rate(airflow_dagrun_duration_failed_count{dag_id=~\"maintenance|test_environment\"}[15m]))",
+          "expr": "sum(increase(airflow_dagrun_duration_failed_count{dag_id=~\"maintenance|test_environment\"}[1h]))",
           "legendFormat": "failure"
         }
       ],
