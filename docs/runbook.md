@@ -109,6 +109,27 @@ docker exec grafana grafana cli admin reset-admin-password '<new-password>'
 ssh worker-vm sudo systemctl restart promtail
 ```
 
+## Adminer 접속
+
+`http://adminer.internal` — Tailscale 연결 필수.
+
+로그인 값 (`compose/_hosts/ops-vm.env` 참조):
+- System: PostgreSQL
+- Server: postgres
+- Username: `POSTGRES_USER`
+- Password: `POSTGRES_PASSWORD`
+- Database: 비우면 전체 목록, 특정 DB 접속 시 DB명 입력
+
+**ERR_SSL_PROTOCOL_ERROR (Chrome 일반 모드에서만 발생):**
+
+Chrome이 이전 HTTPS 리다이렉트를 캐시한 것. HSTS와 다른 캐시.
+
+해결:
+1. F12 → Network 탭 → "Disable cache" 체크 → `http://adminer.internal` 접속
+2. 이후 `chrome://settings/clearBrowserData` → "캐시된 이미지 및 파일" 삭제
+
+또는 DevTools Network 탭의 "Disable cache"를 켠 채로 사용해도 됨.
+
 ## Caddy LE 인증서 갱신
 
 자동 (Caddy 가 만료 30 일 전 갱신). 검증:
