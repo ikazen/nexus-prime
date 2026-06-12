@@ -1,121 +1,443 @@
 {
   "uid": "airflow-platform",
   "title": "airflow 플랫폼 건강",
-  "tags": ["nexus", "airflow"],
+  "tags": [
+    "nexus",
+    "airflow"
+  ],
   "timezone": "browser",
   "schemaVersion": 39,
   "version": 1,
   "refresh": "1m",
-  "time": { "from": "now-6h", "to": "now" },
-  "templating": { "list": [] },
-  "annotations": { "list": [] },
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "templating": {
+    "list": []
+  },
+  "annotations": {
+    "list": []
+  },
   "panels": [
     {
       "id": 1,
       "type": "stat",
       "title": "scheduler heartbeat (rate 5m)",
-      "datasource": { "type": "prometheus", "uid": "bfnc68nag9p8ga" },
-      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
-      "targets": [ { "refId": "A", "expr": "rate(airflow_scheduler_heartbeat[5m])" } ],
-      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background", "graphMode": "none", "textMode": "value" },
-      "fieldConfig": { "defaults": { "unit": "short", "thresholds": { "mode": "absolute", "steps": [ { "color": "red", "value": null }, { "color": "green", "value": 0.001 } ] } }, "overrides": [] }
+      "datasource": {
+        "type": "prometheus",
+        "uid": "bfnc68nag9p8ga"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 0
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "rate(airflow_scheduler_heartbeat[5m])"
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 0.001
+              }
+            ]
+          }
+        },
+        "overrides": []
+      }
     },
     {
       "id": 2,
       "type": "stat",
       "title": "DAG import 에러",
-      "datasource": { "type": "prometheus", "uid": "bfnc68nag9p8ga" },
-      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 0 },
-      "targets": [ { "refId": "A", "expr": "airflow_dag_processing_import_errors" } ],
-      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background", "graphMode": "none", "textMode": "value" },
-      "fieldConfig": { "defaults": { "unit": "short", "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null }, { "color": "red", "value": 1 } ] } }, "overrides": [] }
+      "datasource": {
+        "type": "prometheus",
+        "uid": "bfnc68nag9p8ga"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 0
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "airflow_dag_processing_import_errors"
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      }
     },
     {
       "id": 3,
       "type": "stat",
       "title": "dagbag 크기 (DAG 수)",
-      "datasource": { "type": "prometheus", "uid": "bfnc68nag9p8ga" },
-      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 0 },
-      "targets": [ { "refId": "A", "expr": "airflow_dagbag_size" } ],
-      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value", "graphMode": "none", "textMode": "value" },
-      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] }
+      "datasource": {
+        "type": "prometheus",
+        "uid": "bfnc68nag9p8ga"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 12,
+        "y": 0
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "airflow_dagbag_size"
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      }
     },
     {
       "id": 4,
       "type": "stat",
       "title": "실행중 DagRun",
-      "datasource": { "type": "prometheus", "uid": "bfnc68nag9p8ga" },
-      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 0 },
-      "targets": [ { "refId": "A", "expr": "airflow_scheduler_dagruns_running" } ],
-      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value", "graphMode": "area", "textMode": "value" },
-      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] }
+      "datasource": {
+        "type": "prometheus",
+        "uid": "bfnc68nag9p8ga"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 0
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "airflow_scheduler_dagruns_running"
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "value",
+        "graphMode": "area",
+        "textMode": "value"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      }
     },
     {
       "id": 5,
       "type": "timeseries",
       "title": "Edge executor 슬롯 (running / queued / open)",
-      "datasource": { "type": "prometheus", "uid": "bfnc68nag9p8ga" },
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 4 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "bfnc68nag9p8ga"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 4
+      },
       "targets": [
-        { "refId": "A", "expr": "airflow_executor_running_tasks", "legendFormat": "running" },
-        { "refId": "B", "expr": "airflow_executor_queued_tasks", "legendFormat": "queued" },
-        { "refId": "C", "expr": "airflow_executor_open_slots", "legendFormat": "open" }
+        {
+          "refId": "A",
+          "expr": "sum(airflow_ti_running)",
+          "legendFormat": "running"
+        },
+        {
+          "refId": "B",
+          "expr": "sum(airflow_ti_queued)",
+          "legendFormat": "queued"
+        },
+        {
+          "refId": "C",
+          "expr": "airflow_executor_open_slots",
+          "legendFormat": "open"
+        }
       ],
-      "fieldConfig": { "defaults": { "unit": "short", "custom": { "drawStyle": "line", "fillOpacity": 10, "showPoints": "never" } }, "overrides": [] },
-      "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "multi" } }
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "showPoints": "never"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
     },
     {
       "id": 6,
       "type": "timeseries",
       "title": "default_pool 슬롯 (running / queued / open)",
-      "datasource": { "type": "prometheus", "uid": "bfnc68nag9p8ga" },
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 4 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "bfnc68nag9p8ga"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 4
+      },
       "targets": [
-        { "refId": "A", "expr": "airflow_pool_running_slots_default_pool", "legendFormat": "running" },
-        { "refId": "B", "expr": "airflow_pool_queued_slots_default_pool", "legendFormat": "queued" },
-        { "refId": "C", "expr": "airflow_pool_open_slots_default_pool", "legendFormat": "open" }
+        {
+          "refId": "A",
+          "expr": "airflow_pool_running_slots_default_pool",
+          "legendFormat": "running"
+        },
+        {
+          "refId": "B",
+          "expr": "airflow_pool_queued_slots_default_pool",
+          "legendFormat": "queued"
+        },
+        {
+          "refId": "C",
+          "expr": "airflow_pool_open_slots_default_pool",
+          "legendFormat": "open"
+        }
       ],
-      "fieldConfig": { "defaults": { "unit": "short", "custom": { "drawStyle": "line", "fillOpacity": 10, "showPoints": "never" } }, "overrides": [] },
-      "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "multi" } }
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "showPoints": "never"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
     },
     {
       "id": 7,
       "type": "timeseries",
       "title": "task 결과 rate (성공 / 실패) — run 돌면 채워짐",
-      "datasource": { "type": "prometheus", "uid": "bfnc68nag9p8ga" },
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 12 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "bfnc68nag9p8ga"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 12
+      },
       "targets": [
-        { "refId": "A", "expr": "rate(airflow_ti_successes[15m])", "legendFormat": "success" },
-        { "refId": "B", "expr": "rate(airflow_ti_failures[15m])", "legendFormat": "failure" }
+        {
+          "refId": "A",
+          "expr": "rate(airflow_ti_successes[15m])",
+          "legendFormat": "success"
+        },
+        {
+          "refId": "B",
+          "expr": "rate(airflow_ti_failures[15m])",
+          "legendFormat": "failure"
+        }
       ],
-      "fieldConfig": { "defaults": { "unit": "short", "custom": { "drawStyle": "line", "fillOpacity": 10, "showPoints": "auto" } }, "overrides": [] },
-      "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "multi" } }
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "showPoints": "auto"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
     },
     {
       "id": 8,
       "type": "timeseries",
       "title": "scheduler — starving / executable tasks",
-      "datasource": { "type": "prometheus", "uid": "bfnc68nag9p8ga" },
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 12 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "bfnc68nag9p8ga"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 12
+      },
       "targets": [
-        { "refId": "A", "expr": "airflow_scheduler_tasks_starving", "legendFormat": "starving" },
-        { "refId": "B", "expr": "airflow_scheduler_tasks_executable", "legendFormat": "executable" }
+        {
+          "refId": "A",
+          "expr": "airflow_scheduler_tasks_starving",
+          "legendFormat": "starving"
+        },
+        {
+          "refId": "B",
+          "expr": "airflow_scheduler_tasks_executable",
+          "legendFormat": "executable"
+        }
       ],
-      "fieldConfig": { "defaults": { "unit": "short", "custom": { "drawStyle": "line", "fillOpacity": 10, "showPoints": "never" } }, "overrides": [] },
-      "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "multi" } }
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "showPoints": "never"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
     },
     {
       "id": 9,
       "type": "timeseries",
       "title": "triggerer — triggers running / capacity left",
-      "datasource": { "type": "prometheus", "uid": "bfnc68nag9p8ga" },
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 20 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "bfnc68nag9p8ga"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 20
+      },
       "targets": [
-        { "refId": "A", "expr": "airflow_triggers_running", "legendFormat": "running" },
-        { "refId": "B", "expr": "airflow_triggerer_capacity_left", "legendFormat": "capacity left" }
+        {
+          "refId": "A",
+          "expr": "airflow_triggers_running",
+          "legendFormat": "running"
+        },
+        {
+          "refId": "B",
+          "expr": "airflow_triggerer_capacity_left",
+          "legendFormat": "capacity left"
+        }
       ],
-      "fieldConfig": { "defaults": { "unit": "short", "custom": { "drawStyle": "line", "fillOpacity": 10, "showPoints": "never" } }, "overrides": [] },
-      "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "multi" } }
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "showPoints": "never"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
     }
   ]
 }
