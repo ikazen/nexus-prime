@@ -29,7 +29,7 @@ groups:
 
       - alert: CpuHigh
         expr: >
-          100 - avg by(host) (rate(node_cpu_seconds_total{mode="idle",job=~"node_worker_vm|node_mac_server"}[5m])) * 100 > 90
+          100 - avg by(host) (rate(node_cpu_seconds_total{mode="idle",job="node_mac_server"}[5m])) * 100 > 90
         for: 5m
         labels:
           severity: warning
