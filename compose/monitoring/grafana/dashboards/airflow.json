@@ -301,7 +301,7 @@
     {
       "id": 7,
       "type": "timeseries",
-      "title": "task 결과 rate (성공 / 실패) — run 돌면 채워짐",
+      "title": "DAG run 완료 rate (성공 / 실패) — run 완료 시 채워짐",
       "datasource": {
         "type": "prometheus",
         "uid": "bfnc68nag9p8ga"
@@ -315,12 +315,12 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "rate(airflow_ti_successes[15m])",
+          "expr": "rate(airflow_dagrun_duration_success_count[15m])",
           "legendFormat": "success"
         },
         {
           "refId": "B",
-          "expr": "rate(airflow_ti_failures[15m])",
+          "expr": "rate(airflow_dagrun_duration_failed_count[15m])",
           "legendFormat": "failure"
         }
       ],
