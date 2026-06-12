@@ -1,0 +1,13 @@
+services:
+  adminer:
+    image: adminer:latest
+    container_name: adminer
+    environment:
+      ADMINER_DEFAULT_SERVER: postgres
+    networks:
+      - nexus
+    restart: unless-stopped
+
+networks:
+  nexus:
+    external: true

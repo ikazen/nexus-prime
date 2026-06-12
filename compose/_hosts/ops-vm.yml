@@ -7,3 +7,4 @@ include:
   - path: ../dnsmasq/compose.yml
   - path: ../monitoring/compose.yml
   - path: ../neo4j/compose.yml
+  - path: ../adminer/compose.yml
