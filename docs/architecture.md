@@ -12,9 +12,13 @@
 │  ops-vm  (OCI A1.Flex 2/12 GB, 150 GB boot, public IP)           │
 ├──────────────────────────────────────────────────────────────────┤
 │  Caddy        ──► api-server:8080, grafana:3000                  │
-│               ──► minio.internal → mac-server:9000 (tailnet)     │
-│  Postgres 16    shared DB                                        │
+│               ──► *.internal → nexus 컨테이너 / mac-server tailnet│
+│  dnsmasq        *.internal → tailnet IP (host network)           │
+│  Postgres 16    shared DB (nexus + host 5432)                    │
 │  Registry       tailnet IP bind, named volume                    │
+│  Registry UI    registry-ui.internal                             │
+│  Adminer        adminer.internal (DB 브라우저)                    │
+│  Neo4j 5        neo4j.internal / bolt :7687 tailnet bind         │
 │  Prometheus / Grafana / Alertmanager / Loki / Promtail           │
 │  statsd_exporter / node_exporter                                 │
 └────────────────────┬─────────────────────────────────────────────┘
@@ -67,7 +71,7 @@ registry storage 도 ops-vm 부트 디스크 안 (docker named volume). 디스�
 | OCI 리소스 (VCN·NSG·instance·volume·IP) | nexus-prime `tofu/` |
 | Tailscale 노드 가입 / ACL | nexus-prime (수동, `docs/runbook.md`) |
 | 호스트 부트스트랩 (swap·Docker·unattended-upgrades) | nexus-prime `hosts/{host}/host-setup.sh` |
-| Caddy / Postgres / Registry 컨테이너 | nexus-prime `compose/{기능}/` |
+| Caddy / Postgres / Registry / Registry UI / Neo4j / Adminer / dnsmasq 컨테이너 | nexus-prime `compose/{기능}/` |
 | MinIO (data lake, mac-server) | nexus-prime `compose/minio/` |
 | Prometheus / Grafana / Alertmanager / Loki / Promtail / statsd_exporter / node_exporter | nexus-prime `compose/monitoring/` |
 | airflow control plane (api-server·scheduler·dag-processor) | airflow-stack |

@@ -12,6 +12,10 @@ compose/       기능별 docker compose
   caddy/       Caddyfile — 외부/내부 라우팅 진입점
   postgres/    pgvector/pgvector:pg16. nexus network 바인드
   registry/    registry:2. tailnet IP 바인드. retention.py + registry-gc.sh
+  registry-ui/ joxit/docker-registry-ui. registry-ui.internal
+  adminer/     adminer. adminer.internal (DB 브라우저)
+  dnsmasq/     *.internal → tailnet IP 해석. host network mode
+  neo4j/       neo4j:5. bolt :7687 tailnet 바인드. neo4j.internal
   minio/       MinIO. mac-server 전용 (ops-vm.yml 미포함)
   monitoring/  Prometheus / Grafana / Loki / Promtail / Alertmanager / statsd-exporter / node-exporter
 hosts/         호스트별 부트스트랩
@@ -25,7 +29,7 @@ docs/          architecture / decisions / dev-guide / runbook / setup
 
 ## 인프라 개요
 
-- ops-vm: 공인 IP 보유. Caddy / Postgres / Registry / Monitoring 컨테이너 실행. `nexus` docker network 허브
+- ops-vm: 공인 IP 보유. Caddy / Postgres / Registry / Registry UI / Neo4j / Adminer / dnsmasq / Monitoring 컨테이너 실행. `nexus` docker network 허브
 - worker-vm: 사설, Tailscale 전용. Airflow edge worker + node_exporter + promtail
 - mac-server: M1, intermittent. MinIO + Colima + Airflow edge worker. launchd LaunchAgent 로 자동시동
 - 네트워크: 노드 간 = Tailscale (MagicDNS `*.internal` → ops-vm tailnet IP). 외부 ingress = ops-vm :443 → Caddy
