@@ -27,10 +27,6 @@ http://adminer.internal {
     reverse_proxy adminer:8080
 }
 
-http://registry.internal {
-    reverse_proxy registry:5000
-}
-
 http://registry-ui.internal {
     reverse_proxy registry-ui:80
 }

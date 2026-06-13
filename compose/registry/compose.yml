@@ -5,7 +5,7 @@ services:
     environment:
       REGISTRY_STORAGE_DELETE_ENABLED: "true"
     ports:
-      # bootstrap 및 내부 접근용 (tailnet 전용). 일반 push/pull 은 registry.internal 사용.
+      # tailnet 직결 push/pull 용. 주소: registry.internal:5000.
       - "${OPS_TAILNET_IP}:5000:5000"
     volumes:
       - registry-data:/var/lib/registry

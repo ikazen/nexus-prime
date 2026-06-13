@@ -10,7 +10,7 @@
 | 서비스 | 호스트 | nexus network 안 | tailnet alias | 외부 HTTPS | 인증 | 비고 |
 |---|---|---|---|---|---|---|
 | Postgres | ops-vm | `postgres:5432` | — | — | user/pw | 공유 DB, 서비스별 DB/user 분리 발급 |
-| Registry (API) | ops-vm | `registry:5000` | `http://registry.internal` | — | 없음 | HTTP, 호스트당 `insecure-registries` 1회 |
+| Registry (API) | ops-vm | `registry:5000` | `registry.internal:5000` | — | 없음 | HTTP tailnet 직결, 호스트당 `insecure-registries` 1회 |
 | Registry UI | ops-vm | `registry-ui:80` | `http://registry-ui.internal` | — | 없음 | 브라우저 카탈로그 |
 | MinIO (S3) | mac-server | — | `http://minio.internal` | — | access/secret | fallback `<MAC_TAILNET_IP>:9000` |
 | MinIO Console | mac-server | — | `http://minio-console.internal` | — | 자체 로그인 | fallback `<MAC_TAILNET_IP>:9001` |
@@ -49,25 +49,25 @@
 
 **Linux (ops-vm, worker-vm)**:
 ```bash
-echo '{"insecure-registries": ["registry.internal"]}' | sudo tee /etc/docker/daemon.json
+echo '{"insecure-registries": ["registry.internal:5000"]}' | sudo tee /etc/docker/daemon.json
 sudo systemctl restart docker
 ```
 
-**mac-server (Colima)**: Docker는 포트 미지정 시 HTTPS(443)를 시도하므로 `:80` 명시 필요:
+**mac-server (Colima)**:
 ```yaml
 # ~/.colima/default/colima.yaml
 docker:
   insecure-registries:
-    - registry.internal:80
+    - registry.internal:5000
 ```
-`colima restart` 후 주소도 `registry.internal:80/<name>:<tag>` 로.
+`colima restart` 후 주소도 `registry.internal:5000/<name>:<tag>` 로.
 DNS 미작동 시 fallback: `<OPS_TAILNET_IP>:5000`.
 
 **push / pull**:
 ```bash
-docker tag <image> registry.internal/<name>:<tag>
-docker push registry.internal/<name>:<tag>
-docker pull registry.internal/<name>:<tag>
+docker tag <image> registry.internal:5000/<name>:<tag>
+docker push registry.internal:5000/<name>:<tag>
+docker pull registry.internal:5000/<name>:<tag>
 ```
 
 ## MinIO
@@ -196,8 +196,8 @@ docker exec -it postgres psql -U postgres -c "GRANT ALL ON SCHEMA public TO <use
 
 5. 이미지가 self-host registry 라면:
    ```bash
-   docker build -t registry.internal/<svc>:<tag> .
-   docker push registry.internal/<svc>:<tag>
+   docker build -t registry.internal:5000/<svc>:<tag> .
+   docker push registry.internal:5000/<svc>:<tag>
    ```
 
 ## 사용 예: airflow-stack
@@ -206,7 +206,7 @@ docker exec -it postgres psql -U postgres -c "GRANT ALL ON SCHEMA public TO <use
 
 - **Postgres**: `airflow` DB + `airflow` user (서비스별 분리, L4)
 - **Docker network**: 3 노드 모두 `nexus` external join. 컨테이너는 호스트 별 compose, network 로 결합
-- **Registry**: `@task.docker(image=registry.internal/<name>:<tag>)` 로 태스크 이미지 참조
+- **Registry**: `@task.docker(image=registry.internal:5000/<name>:<tag>)` 로 태스크 이미지 참조
 - **MinIO**: 데이터 lake (S3 API), DAG 가 `http://minio.internal` 로 접근
 - **메트릭**: airflow 가 nexus 안 `statsd-exporter:9125/udp` 로 push → Prometheus scrape → Grafana 대시보드
 - **로그**: 각 호스트 promtail 이 컨테이너 stdout 수집 → Loki

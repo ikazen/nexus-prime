@@ -56,7 +56,7 @@
 - 각 기능별 `compose/<svc>/compose.yml` 이 독립. `docker compose -f compose/<svc>/compose.yml --env-file ... up -d` 단일로 재기동 가능
 - `restart: unless-stopped` 모든 서비스에 (caddy/postgres/registry/registry-ui/dnsmasq)
 - `nexus` external network 가 호스트 1 회 생성 (`hosts/ops-vm/host-setup.sh:42-47`) → compose 재기동이 network 를 망가뜨리지 않음
-- Caddy 가 정의한 host-level 결합점 (`AIRFLOW_DOMAIN`, `registry.internal`, `registry-ui.internal`) 만 챙기면 됨
+- Caddy 가 정의한 host-level 결합점 (`AIRFLOW_DOMAIN`, `registry-ui.internal`) 만 챙기면 됨 (registry 는 tailnet 직결 `:5000`)
 - 인스턴스 단위 복구는 `tofu/reinstall-instances.sh` 가 destroy + retry-apply 자동화. L18 정책으로 in-place 변경 제거 → 변경/복구 절차 통일
 
 ### Gaps
@@ -205,7 +205,7 @@
 |---|---|
 | docker network = `nexus` (external) | `docs/architecture.md:67`, `docs/decisions.md:L15` |
 | postgres = `postgres:5432` (같은 network 안) | `docs/architecture.md:69`, `docs/runbook.md:26-34` |
-| registry = `registry.internal` (Caddy 경유, tailnet 전용) | `docs/runbook.md:58-83` |
+| registry = `registry.internal:5000` (tailnet 직결, Caddy 우회) | `docs/decisions.md:L20` |
 | Caddy 외부 라우팅 추가 = Caddyfile 편집 + 호스트 wrapper rebuild | `compose/caddy/Caddyfile`, `compose/_hosts/ops-vm.yml` |
 | Caddy 내부 라우팅 + DNS = Caddyfile 추가 (dnsmasq 변경 X) | `docs/runbook.md:53-55` |
 | 호스트 wrapper 진입점 = `compose/_hosts/ops-vm.yml` include | `compose/_hosts/README.md` |
