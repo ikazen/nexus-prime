@@ -10,6 +10,7 @@ services:
       OLLAMA_BASE_URL: http://${MAC_TAILNET_IP}:11434
       OLLAMA_CLOUD_BASE_URL: ${OLLAMA_CLOUD_BASE_URL}
       OLLAMA_API_KEY: ${OLLAMA_API_KEY}
+      LLM_MODEL: deepseek-v4-pro
       JWT_SECRET: ${POG_JWT_SECRET}
       AUTH_USERS: ${POG_AUTH_USERS}
     restart: unless-stopped
