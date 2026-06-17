@@ -6,6 +6,7 @@ services:
       AIRFLOW_DOMAIN: ${AIRFLOW_DOMAIN}
       GRAFANA_DOMAIN: ${GRAFANA_DOMAIN}
       MAC_TAILNET_IP: ${MAC_TAILNET_IP}
+      POT_OF_GREED_DOMAIN: ${POT_OF_GREED_DOMAIN}
     ports:
       - "80:80"
       - "443:443"

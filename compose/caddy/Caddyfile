@@ -43,6 +43,15 @@ http://pot-of-greed-api.internal {
     reverse_proxy pot-of-greed-api:8000
 }
 
+{$POT_OF_GREED_DOMAIN} {
+    header {
+        Strict-Transport-Security "max-age=31536000"
+        X-Frame-Options "SAMEORIGIN"
+        X-Content-Type-Options "nosniff"
+    }
+    reverse_proxy pot-of-greed-ui:8000
+}
+
 {$AIRFLOW_DOMAIN} {
     header {
         Strict-Transport-Security "max-age=31536000"
