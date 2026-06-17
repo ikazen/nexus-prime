@@ -39,6 +39,10 @@ http://rondo-dashboard.internal {
     reverse_proxy rondo-dashboard:8501
 }
 
+http://pot-of-greed-api.internal {
+    reverse_proxy pot-of-greed-api:8000
+}
+
 {$AIRFLOW_DOMAIN} {
     header {
         Strict-Transport-Security "max-age=31536000"

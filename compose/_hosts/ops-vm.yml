@@ -8,3 +8,4 @@ include:
   - path: ../monitoring/compose.yml
   - path: ../neo4j/compose.yml
   - path: ../adminer/compose.yml
+  - path: ../pot-of-greed/compose.yml
