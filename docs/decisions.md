@@ -26,6 +26,7 @@
 | L18 | 인스턴스 = immutable. 변경·복구 = destroy + create (in-place 변경 안 함) | minimal·disposable (L7) 와 같은 사상. drift 0, 변경 vs 복구 절차 통일, MTTR ≈ MTTC (capacity 잡는 시간). 데이터 손실 OK — airflow 메타 / registry storage 모두 disposable, lol-list 데이터는 Supabase 외부 |
 | L19 | Neo4j Community on ops-vm. bolt :7687 tailnet IP bind, HTTP browser Caddy 경유 (`http://neo4j.internal`). heap 512m→1500m, pagecache 2g (~4GB RSS) | 그래프 데이터 모델 필요. Community 무료, 단일 노드 적합. ops-vm 12GB 공유 환경이므로 메모리 상한 명시. L7 (백업 없음) 동일 적용 — neo4j-data volume disposable |
 | L20 | registry push/pull 주소 = `registry.internal:5000` (tailnet 직결, Caddy 우회) | Docker 는 포트 없는 호스트명에 443 시도 → ops-vm 443 은 공인 Caddy edge → broken TLS. `:80` 명시는 Caddy HTTP 우회였으나 hop 불필요 — tailnet IP:5000 직결로 통일. Caddy `http://registry.internal` 라우트 제거 (BON-128) |
+| L21 | ops-vm docker 유지보수(registry retention+GC, build cache prune)는 **airflow DAG** 로 실행. systemd `registry-gc.{service,timer}` 폐지. ops edge worker 에 `docker.sock` 마운트, 유지보수 태스크는 **ops 큐 전용** | 운영성: airflow UI 에서 실행/로그/재시도 가시. registry·docker 데몬이 ops-vm 동일 호스트라 같은 worker 에서 `docker exec registry ...`+`builder prune` 가능. **docker.sock = 호스트 docker root 노출**이므로 ops 큐를 privileged 인프라 유지보수 전용으로 고정 — 일반 워크로드 라우팅 금지로 blast radius 한정. systemd 제거는 DAG 정상 동작 검증 후 (GC 공백 방지). DAG·sock 마운트 = airflow-stack |
 
 ## 재고 가능 결정
 
