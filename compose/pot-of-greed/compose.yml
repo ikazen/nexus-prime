@@ -29,6 +29,7 @@ services:
     environment:
       API_BASE_URL: http://pot-of-greed-api:8000
       CHAINLIT_AUTH_SECRET: ${POG_CHAINLIT_AUTH_SECRET}
+      CHAINLIT_DB_DSN: postgresql+asyncpg://${POG_PG_USER}:${POG_PG_PASSWORD}@postgres:5432/${POG_PG_DB}
     restart: unless-stopped
     networks:
       - nexus
