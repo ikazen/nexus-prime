@@ -41,6 +41,10 @@
 └──────────────────────────────────────────────────────────────────┘
 ```
 
+위 박스는 인프라 컨테이너만 표기. ops-vm 은 추가로 앱 워크로드도 호스팅한다:
+- **pot-of-greed** (api + ui) — `compose/pot-of-greed/`, `ops-vm.yml` include 로 본 repo 가 직접 배포. Postgres + Neo4j + Ollama(mac-server) 의존. 내부 노출만 (`pot-of-greed-{api,ui}.internal`)
+- **reflexion-rondo** (rondo-daemon + dashboard) — 자체 repo 에서 배포, nexus network·Caddy 만 공유 (`rondo-{api,dashboard}.internal`)
+
 ## 네트워크
 
 - **외부 ingress**: ops-vm 443 → Caddy → api-server:8080 (사람용 UI). 80 → ACME redirect
@@ -74,6 +78,7 @@ registry storage 도 ops-vm 부트 디스크 안 (docker named volume). 디스�
 | Caddy / Postgres / Registry / Registry UI / Neo4j / Adminer / dnsmasq 컨테이너 | nexus-prime `compose/{기능}/` |
 | MinIO (data lake, mac-server) | nexus-prime `compose/minio/` |
 | Prometheus / Grafana / Alertmanager / Loki / Promtail / statsd_exporter / node_exporter | nexus-prime `compose/monitoring/` |
+| pot-of-greed (api·ui, 앱 워크로드) | nexus-prime `compose/pot-of-greed/` — 인프라 repo 가 직접 배포 (예외) |
 | airflow control plane (api-server·scheduler·dag-processor) | airflow-stack |
 | airflow edge worker | airflow-stack |
 | DAG / 워크로드 코드 | airflow-stack + 도메인 repo (예: lol-list) |

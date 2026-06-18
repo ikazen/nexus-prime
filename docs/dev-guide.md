@@ -22,6 +22,8 @@
 | node-exporter | 3 노드 모두 | ops-vm: nexus 안 / worker·mac: `:9100` tailnet 직결 | — | — | 없음 | Prometheus 가 tailnet 으로 scrape |
 | Neo4j | ops-vm | `neo4j:7474` (HTTP) | `http://neo4j.internal` | — | neo4j/pw | bolt: `<OPS_TAILNET_IP>:7687` 직결 |
 | Caddy edge | ops-vm | — | — | 443 | — | 모든 외부 라우팅 진입점 |
+| pot-of-greed API | ops-vm | `pot-of-greed-api:8000` | `http://pot-of-greed-api.internal` | — | JWT | 앱 워크로드 (본 repo `compose/pot-of-greed/`). Postgres+Neo4j+Ollama 의존 |
+| pot-of-greed UI | ops-vm | `pot-of-greed-ui:8000` | `http://pot-of-greed-ui.internal` | — | Chainlit auth | 공개 노출 시 Caddyfile `POT_OF_GREED_DOMAIN` 블록 주석 해제 |
 
 **dnsmasq / promtail 은 인프라 plumbing — 워크로드가 직접 호출하지 않음.**
 

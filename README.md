@@ -12,7 +12,7 @@ OCI 2 노드 + M1 1 노드 인프라 layer. Tailscale 메쉬, Caddy edge, Postgr
   - `_hosts/` — 호스트별 wrapper (include + external network)
 - `hosts/` — 호스트별 셋업 (host-setup.sh, README, .env.example)
 - `ssh/` — tailnet 호스트 alias
-- `docs/` — architecture / setup / runbook / decisions / tasks
+- `docs/` — architecture / setup / runbook / decisions / dev-guide / audit (작업 추적은 Linear, repo 내 tasks.md 없음)
 
 ## 진입점
 
