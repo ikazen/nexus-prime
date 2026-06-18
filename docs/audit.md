@@ -1,5 +1,8 @@
 # Infrastructure Audit — 2026-05-28 (갱신)
 
+> 2026-06-18 이후 변경(SOPS 시크릿 암호화 BON-102, registry :5000 L20, pot-of-greed 배포)은
+> `docs/review-2026-06-18.md` 참조. 본 문서엔 직접 영향받는 항목만 해소 마킹.
+
 평가 대상: `nexus-prime` (인프라 layer). airflow-stack (워크로드) 는 cross-reference 만.
 
 방법:
@@ -35,7 +38,7 @@
 - `.terraform.lock.hcl` commit 되어 provider 버전 재현성 보장 (`.gitignore:14` 주석)
 
 ### Gaps
-- **`secrets-backup.md` 와 실제 `.env` 가 manual sync.** 자동 검증 스크립트 없음. 패스워드 1 개 회전하면 양쪽 다 손으로 갱신해야 함. 한쪽만 갱신되면 재구축 시 발견.
+- ~~**`secrets-backup.md` 와 실제 `.env` 가 manual sync.**~~ — 해소 (2026-06-13, BON-102): SOPS `ops-vm.enc.env` 가 SSOT. 배포 스크립트(`deploy-ops-vm.sh:18`)가 `sops -d` 로 .env 자동 복원 → 수동 sync 제거. (re-encrypt drift 주의: `review-2026-06-18.md` F1)
 - ~~**외부 의존 셋업이 문서화 안 됨**~~ — 해소 (2026-05-31): `secrets-backup.md` 에 DNS provider / Tailscale 계정 / OCI 테넌시 이메일·MFA 추가 완료.
 - ~~**첫 dnsmasq 부트스트랩 chicken-and-egg**~~ — 해소 (2026-05-31): `compose/dnsmasq/compose.yml` 에 `build: .` 추가. 첫 셋업 시 로컬 빌드 가능, registry 의존 제거.
 
@@ -103,8 +106,7 @@
 
 ### Secrets handling
 - `.env` / `terraform.tfvars` / `secrets-backup.md` 모두 gitignored — git history 검증 완료 (`git log -S <domain>` no result).
-- `secrets-backup.md` 자체가 clearext markdown 으로 dev 머신 평문 저장. dev 머신 침해 = 전부 노출.
-  - 권장: 이 파일 자체를 GPG 또는 age 로 암호화하고 (`*.md.age` gitignore 추가) 평문은 짧은 시간만.
+- ~~`secrets-backup.md` 자체가 clearext markdown 으로 dev 머신 평문 저장.~~ — 해소 (2026-06-13, BON-102): SOPS+age 로 `compose/_hosts/ops-vm.enc.env` 암호화 commit. `ops-vm.enc.env` 가 시크릿 SSOT. `secrets-backup.md` 는 git 비관리 로컬 개인 참조용으로만 유지.
 - **OCI API key 만료/회전 정책 없음**. 장기 살아있는 key. dev 머신 침해 시 OCI 전 권한.
   - 권장: `oci session authenticate` (token, 1 시간) 기반으로 옮기거나, 최소한 `oci iam api-key list` 주기 검토.
 - **postgres password 길이 OK** (24 자 base64). Fernet/JWT 32 byte. ssh key ed25519. 모두 적절.
@@ -271,5 +273,5 @@
 | P3 | OCI API key rotation routine (분기 1 회 fingerprint 갱신) | 장기 살아있는 key 위험 | routine 추가 |
 | ~~P3~~ | ~~신규 서비스 추가 체크리스트~~ | ~~신규 서비스 추가자 onboarding~~ | 완료 (`docs/runbook.md`) |
 | P3 | registry / registry-ui 에 basic auth 추가 — tailnet 다중 사용자 트리거 시만 | R2 의 사전 준비 | 1 시간 |
-| P4 | `secrets-backup.md` 자체를 age 암호화 | dev 머신 침해 위험 감소 | 1 시간 |
+| ~~P4~~ | ~~`secrets-backup.md` 자체를 age 암호화~~ | ~~dev 머신 침해 위험 감소~~ | 완료 (SOPS+age `ops-vm.enc.env`, BON-102) |
 | P4 | tofu state OCI Object Storage backend 로 이전 | R3 트리거 (다중 운영자) 시 | 1 시간 |

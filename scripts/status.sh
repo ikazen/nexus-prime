@@ -23,5 +23,9 @@ else
 fi
 
 echo ""
+echo "=== docker ps (전체 — ops-vm.yml 밖 워크로드 포함: airflow / rondo / pot-of-greed) ==="
+docker ps --format "table {{.Names}}\t{{.Status}}" 2>&1 || echo "docker 미실행"
+
+echo ""
 echo "=== tailscale status ==="
 tailscale status 2>&1 || echo "tailscale 미설치 또는 미연결"
