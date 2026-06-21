@@ -109,4 +109,13 @@ if tailscale status >/dev/null 2>&1; then
   fi
 fi
 
+# journald 크기 상한 — 초과분 자동 rotation
+sudo mkdir -p /etc/systemd/journald.conf.d
+sudo tee /etc/systemd/journald.conf.d/maxuse.conf >/dev/null <<'EOF'
+[Journal]
+SystemMaxUse=200M
+EOF
+sudo systemctl restart systemd-journald
+echo "journald SystemMaxUse=200M 설정 완료"
+
 echo "=== worker-vm host-setup 완료 ==="
