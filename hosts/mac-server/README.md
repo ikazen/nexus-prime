@@ -108,6 +108,28 @@ launchctl load ~/Library/LaunchAgents/local.rclone-minio.plist
 
 확인: `ls ~/minio/models`
 
+## claude HTTP 브리지
+
+Airflow edge worker 는 컨테이너 안에서 돈다 — claude 는 macOS 호스트 사용자 세션에
+인증돼 있어 컨테이너에서 직접 실행 불가. 이 브리지가 tailnet IP + Bearer 토큰으로
+호스트 경계를 넘겨준다 (`airflow-stack` 의 `daily_claude_ping` DAG 가 호출).
+
+```bash
+cp hosts/mac-server/launchd/local.claude-bridge.plist ~/Library/LaunchAgents/
+# ${HOME} 보간 문제 → ProgramArguments 경로를 절대경로로 수정 (위 "plist 의 ${HOME} 보간" 참조)
+# CLAUDE_BRIDGE_BIND 를 실제 <MAC_TAILNET_IP>:8765 로, CLAUDE_BRIDGE_TOKEN 을 openssl rand -hex 24 값으로 교체
+# 로컬 plist 만 편집 — git 에 안 박힘
+
+launchctl load ~/Library/LaunchAgents/local.claude-bridge.plist
+```
+
+확인:
+```bash
+curl -s -H "Authorization: Bearer <token>" -d '{"msg":"ㅎㅇ"}' http://<MAC_TAILNET_IP>:8765/ping
+```
+
+토큰은 airflow-stack 쪽 `infra/ops-vm/.env` 의 `CLAUDE_BRIDGE_TOKEN` 과 동일해야 함.
+
 ## SSH
 
 `ssh/config.example` 참조.

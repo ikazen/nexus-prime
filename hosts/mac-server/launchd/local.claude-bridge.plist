@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>local.claude-bridge</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/opt/homebrew/bin/python3</string>
+        <string>${HOME}/projects/nexus-prime/hosts/mac-server/claude-bridge.py</string>
+    </array>
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+        <key>CLAUDE_BRIDGE_BIND</key>
+        <string>&lt;MAC_TAILNET_IP&gt;:8765</string>
+        <key>CLAUDE_BRIDGE_TOKEN</key>
+        <string>&lt;claude-bridge-token&gt;</string>
+    </dict>
+    <key>RunAtLoad</key><true/>
+    <key>KeepAlive</key><true/>
+    <key>StandardOutPath</key><string>${HOME}/Library/Logs/claude-bridge.out.log</string>
+    <key>StandardErrorPath</key><string>${HOME}/Library/Logs/claude-bridge.err.log</string>
+</dict>
+</plist>
