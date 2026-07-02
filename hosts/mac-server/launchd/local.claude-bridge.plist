@@ -20,6 +20,8 @@
         <key>CLAUDE_BIN</key>
         <string>/Users/&lt;your-user&gt;/.local/bin/claude</string>
     </dict>
+    <key>LimitLoadToSessionType</key>
+    <string>Aqua</string>
     <key>RunAtLoad</key><true/>
     <key>KeepAlive</key><true/>
     <key>StandardOutPath</key><string>${HOME}/Library/Logs/claude-bridge.out.log</string>
