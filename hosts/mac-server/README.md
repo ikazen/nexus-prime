@@ -108,6 +108,33 @@ launchctl load ~/Library/LaunchAgents/local.rclone-minio.plist
 
 확인: `ls ~/minio/models`
 
+## claude 자동 ping 용 SSH 키 (daily_claude_ping DAG)
+
+`airflow-stack` 의 `daily_claude_ping` DAG 가 이 호스트의 claude CLI 를 원격 실행한다.
+claude 인증은 macOS 로그인 키체인에 저장돼 있고, **키체인은 SSH 로그인(PAM 인증)을
+거친 세션에서만 언락된다** — launchd 등 데몬 프로세스에서 기동한 프로세스는 동일 유저라도
+키체인 접근이 막힌다(실측 확인됨). 그래서 상주 브리지 대신 매 실행마다 실제 SSH 인증을
+거치는 구조를 쓴다.
+
+전용 키를 발급하고 forced command 로 이 키가 claude ping 외 아무 것도 못 하게 제한:
+
+```bash
+ssh-keygen -t ed25519 -f ~/.ssh/airflow_claude_ping -N "" -C "airflow-daily-claude-ping"
+
+# authorized_keys 에 forced command + restrict 로 추가 (claude 실제 경로는 `which claude` 로 확인)
+PUBKEY=$(cat ~/.ssh/airflow_claude_ping.pub)
+echo "command=\"$(which claude) -p ㅎㅇ\",restrict $PUBKEY" >> ~/.ssh/authorized_keys
+```
+
+개인키(`~/.ssh/airflow_claude_ping`)는 base64 로 인코딩해 `airflow-stack` 의
+`infra/ops-vm/.env` 의 `CLAUDE_SSH_KEY_B64` 에 저장 (`.env.example` 참조). repo 에는
+공개키·개인키 어느 쪽도 커밋하지 않는다.
+
+확인 (호스트에서 loopback):
+```bash
+ssh -i ~/.ssh/airflow_claude_ping -o BatchMode=yes <your-user>@<MAC_TAILNET_IP> ignored
+```
+
 ## SSH
 
 `ssh/config.example` 참조.
