@@ -114,10 +114,17 @@ Airflow edge worker 는 컨테이너 안에서 돈다 — claude 는 macOS 호�
 인증돼 있어 컨테이너에서 직접 실행 불가. 이 브리지가 tailnet IP + Bearer 토큰으로
 호스트 경계를 넘겨준다 (`airflow-stack` 의 `daily_claude_ping` DAG 가 호출).
 
+claude 바이너리 경로는 설치 방식마다 다르다 (`which claude` 로 확인 — 네이티브 설치는
+보통 `~/.local/bin/claude`, `/opt/homebrew/bin/claude` 아님). launchd 는 비대화형이라
+PATH 가 로그인 셸과 다를 수 있어 `CLAUDE_BIN` 에 절대경로를 직접 박아준다.
+
 ```bash
+which claude   # 실제 경로 확인
+
 cp hosts/mac-server/launchd/local.claude-bridge.plist ~/Library/LaunchAgents/
 # ${HOME} 보간 문제 → ProgramArguments 경로를 절대경로로 수정 (위 "plist 의 ${HOME} 보간" 참조)
 # CLAUDE_BRIDGE_BIND 를 실제 <MAC_TAILNET_IP>:8765 로, CLAUDE_BRIDGE_TOKEN 을 openssl rand -hex 24 값으로 교체
+# CLAUDE_BIN 을 `which claude` 결과 절대경로로 교체
 # 로컬 plist 만 편집 — git 에 안 박힘
 
 launchctl load ~/Library/LaunchAgents/local.claude-bridge.plist

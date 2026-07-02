@@ -6,7 +6,7 @@
     <string>local.claude-bridge</string>
     <key>ProgramArguments</key>
     <array>
-        <string>/opt/homebrew/bin/python3</string>
+        <string>/usr/bin/python3</string>
         <string>${HOME}/projects/nexus-prime/hosts/mac-server/claude-bridge.py</string>
     </array>
     <key>EnvironmentVariables</key>
@@ -17,6 +17,8 @@
         <string>&lt;MAC_TAILNET_IP&gt;:8765</string>
         <key>CLAUDE_BRIDGE_TOKEN</key>
         <string>&lt;claude-bridge-token&gt;</string>
+        <key>CLAUDE_BIN</key>
+        <string>/Users/&lt;your-user&gt;/.local/bin/claude</string>
     </dict>
     <key>RunAtLoad</key><true/>
     <key>KeepAlive</key><true/>
