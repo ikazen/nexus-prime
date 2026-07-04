@@ -27,6 +27,7 @@
 | L19 | Neo4j Community on ops-vm. bolt :7687 tailnet IP bind, HTTP browser Caddy 경유 (`http://neo4j.internal`). heap 512m→1500m, pagecache 2g (~4GB RSS) | 그래프 데이터 모델 필요. Community 무료, 단일 노드 적합. ops-vm 12GB 공유 환경이므로 메모리 상한 명시. L7 (백업 없음) 동일 적용 — neo4j-data volume disposable |
 | L20 | registry push/pull 주소 = `registry.internal:5000` (tailnet 직결, Caddy 우회) | Docker 는 포트 없는 호스트명에 443 시도 → ops-vm 443 은 공인 Caddy edge → broken TLS. `:80` 명시는 Caddy HTTP 우회였으나 hop 불필요 — tailnet IP:5000 직결로 통일. Caddy `http://registry.internal` 라우트 제거 (BON-128) |
 | L21 | ops-vm docker 유지보수(registry retention+GC, build cache prune)는 **airflow DAG** 로 실행. systemd `registry-gc.{service,timer}` 폐지. ops edge worker 에 `docker.sock` 마운트, 유지보수 태스크는 **ops 큐 전용** | 운영성: airflow UI 에서 실행/로그/재시도 가시. registry·docker 데몬이 ops-vm 동일 호스트라 같은 worker 에서 `docker exec registry ...`+`builder prune` 가능. **docker.sock = 호스트 docker root 노출**이므로 ops 큐를 privileged 인프라 유지보수 전용으로 고정 — 일반 워크로드 라우팅 금지로 blast radius 한정. systemd 제거는 DAG 정상 동작 검증 후 (GC 공백 방지). DAG·sock 마운트 = airflow-stack |
+| L22 | omnigent(meta-harness, Claude Code + OpenCode 오케스트레이션) ops-vm 배포. **stateful** — `omnigent-data` 볼륨(artifacts·admin-credentials) + 공유 Postgres `omnigent` DB. `mem_limit: 4g`. 공개 도메인(`agent.<your-domain>`) 노출, 인증은 built-in accounts 모드(OIDC 아님 — 개인 계정 단독 사용 기준 도메인 게이트가 무의미해 accounts 단일 관리자 게이트로 결정, BON-262) | 공개 RCE 표면(원격 shell·파일쓰기) → accounts 인증 필수 전제. **L7 재고 트리거 발동**: omnigent DB/artifacts 백업 정책 미정. 현재는 L7(백업 없음) 그대로 유지 — 재고 시 BON-264 cross-ref |
 
 ## 재고 가능 결정
 
