@@ -8,6 +8,13 @@ services:
       HOST: 0.0.0.0
       PORT: "8000"
       OMNIGENT_ADMIN_CREDENTIALS_PATH: /data/admin-credentials
+      # 인증: built-in accounts 모드 (OIDC 아님). 공개 RCE 표면 + 개인 계정 단독 사용
+      # 기준, Google OIDC의 allowed_domains는 도메인 전체를 허용해 실질 게이트가 안 됨
+      # (BON-262). AUTH_ENABLED=1 + OIDC issuer 미설정 = accounts 모드 자동 선택.
+      OMNIGENT_AUTH_ENABLED: "1"
+      OMNIGENT_ACCOUNTS_BASE_URL: https://${OMNIGENT_DOMAIN}
+      OMNIGENT_ACCOUNTS_COOKIE_SECRET: ${OMNIGENT_ACCOUNTS_COOKIE_SECRET}
+      OMNIGENT_ACCOUNTS_AUTO_OPEN: "0"
     volumes:
       - omnigent-data:/data
     restart: unless-stopped
