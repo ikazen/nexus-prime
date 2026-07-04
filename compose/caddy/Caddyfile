@@ -53,6 +53,15 @@ http://pot-of-greed-ui.internal {
 #     reverse_proxy pot-of-greed-ui:8000
 # }
 
+{$OMNIGENT_DOMAIN} {
+    header {
+        Strict-Transport-Security "max-age=31536000"
+        X-Frame-Options "SAMEORIGIN"
+        X-Content-Type-Options "nosniff"
+    }
+    reverse_proxy omnigent:8000
+}
+
 {$AIRFLOW_DOMAIN} {
     header {
         Strict-Transport-Security "max-age=31536000"
