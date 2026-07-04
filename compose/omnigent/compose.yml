@@ -15,6 +15,9 @@ services:
       OMNIGENT_ACCOUNTS_BASE_URL: https://${OMNIGENT_DOMAIN}
       OMNIGENT_ACCOUNTS_COOKIE_SECRET: ${OMNIGENT_ACCOUNTS_COOKIE_SECRET}
       OMNIGENT_ACCOUNTS_AUTO_OPEN: "0"
+      # 에이전트 CLI 자격증명 — 하니스가 컨테이너 안에서 실행되므로 env로 주입
+      OMNIGENT_ANTHROPIC_API_KEY: ${OMNIGENT_ANTHROPIC_API_KEY}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
     volumes:
       - omnigent-data:/data
     restart: unless-stopped
