@@ -9,3 +9,4 @@ include:
   - path: ../neo4j/compose.yml
   - path: ../adminer/compose.yml
   - path: ../pot-of-greed/compose.yml
+  - path: ../omnigent/compose.yml
