@@ -1,0 +1,29 @@
+services:
+  omnigent:
+    image: ghcr.io/omnigent-ai/omnigent-server:${OMNIGENT_TAG:-latest}
+    container_name: omnigent
+    environment:
+      DATABASE_URL: postgresql+psycopg://${OMNIGENT_PG_USER}:${OMNIGENT_PG_PASSWORD}@postgres:5432/${OMNIGENT_PG_DB}
+      ARTIFACT_DIR: /data/artifacts
+      HOST: 0.0.0.0
+      PORT: "8000"
+      OMNIGENT_ADMIN_CREDENTIALS_PATH: /data/admin-credentials
+    volumes:
+      - omnigent-data:/data
+    restart: unless-stopped
+    mem_limit: 4g
+    healthcheck:
+      test: ["CMD-SHELL", "python3 -c \"import socket; socket.create_connection(('localhost', 8000))\""]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks:
+      - nexus
+
+volumes:
+  omnigent-data:
+
+networks:
+  nexus:
+    external: true
