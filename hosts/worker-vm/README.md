@@ -1,6 +1,7 @@
 # worker-vm
 
-stable airflow worker (default queue). 인프라 컨테이너 0 — airflow-stack 의 edge-worker 만.
+stable airflow worker (default queue) + omnigent(L23 — 위치 격리, ops-vm 심장부에서 이동).
+airflow edge-worker 자체는 airflow-stack repo 관리.
 
 ## 셋업
 
@@ -13,6 +14,14 @@ TAILSCALE_HOSTNAME=<your-hostname> bash hosts/worker-vm/host-setup.sh
 ```
 
 이후 airflow workload (edge worker) 는 별도 repo — airflow-stack 의 `infra/worker-vm/` 참조.
+
+## omnigent 배포
+
+```
+bash scripts/deploy-worker-vm.sh
+```
+
+`compose/_hosts/worker-vm.env.example` 참조 — 실제 값은 SOPS `worker-vm.enc.env` 로 로컬 관리.
 
 ## Promtail 설정 (host-setup.sh 실행 후)
 

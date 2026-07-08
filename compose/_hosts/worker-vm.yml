@@ -1,0 +1,3 @@
+# worker-vm 인프라 컨테이너 wrapper. 운영 명령은 compose/_hosts/README.md.
+include:
+  - path: ../omnigent/compose.yml
