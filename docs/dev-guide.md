@@ -167,6 +167,28 @@ docker exec -it postgres psql -U postgres -c "\c <db>"
 docker exec -it postgres psql -U postgres -c "GRANT ALL ON SCHEMA public TO <user>;"
 ```
 
+### Postgres read-only role 발급
+
+다른 서비스 DB 를 읽기만 해야 하는 경우 (예: omnigent 의 cross-DB 조회) — 전용 DB/user 대신 대상 DB 에 read-only role 을 추가로 발급:
+```bash
+ssh ops-vm
+docker exec -it postgres psql -U postgres -c "CREATE USER <svc>_ro WITH PASSWORD '<pw>';"
+docker exec -it postgres psql -U postgres -c "GRANT CONNECT ON DATABASE <target_db> TO <svc>_ro;"
+docker exec -it postgres psql -U postgres -d <target_db> -c "GRANT USAGE ON SCHEMA public TO <svc>_ro;"
+docker exec -it postgres psql -U postgres -d <target_db> -c "GRANT SELECT ON ALL TABLES IN SCHEMA public TO <svc>_ro;"
+docker exec -it postgres psql -U postgres -d <target_db> -c "ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO <svc>_ro;"
+```
+
+## capability 브로커 원칙 (L21 연장)
+
+원격 자원에 직접 자격증명을 쥐어주는 대신, 필요한 결과만 내주는 좁은 통로를 둔다 (issue #1, L21 일반화):
+
+| 요청 | 직접 (지양) | 브로커 (권장) |
+|---|---|---|
+| 원격 상태 파악 | SSH | Prometheus/Loki 읽기 |
+| 인프라 변경(build/push/GC) | docker.sock | airflow DAG 트리거 (ops 큐 전용, L21) |
+| 타 서비스 DB 읽기 | superuser / 광범위 GRANT | 위 read-only role |
+
 ## 신규 서비스 추가 체크리스트
 
 1. `compose/<svc>/compose.yml` 작성 — 기존 서비스(`compose/postgres/` 등) 복사 후 치환.

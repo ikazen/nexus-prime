@@ -3,16 +3,19 @@ services:
     image: ghcr.io/omnigent-ai/omnigent-server:${OMNIGENT_TAG:-latest}
     container_name: omnigent
     environment:
-      DATABASE_URL: postgresql+psycopg://${OMNIGENT_PG_USER}:${OMNIGENT_PG_PASSWORD}@postgres:5432/${OMNIGENT_PG_DB}
+      # postgres 는 ops-vm 호스트 (nexus network 없는 worker-vm 배치, L23) — tailnet IP 직결.
+      # omnigent user = 자기 DB(omnigent) 만 read-write. cross-DB 읽기는 omnigent_ro role
+      # 로 별도 발급 (dev-guide "Postgres read-only role 발급").
+      DATABASE_URL: postgresql+psycopg://${OMNIGENT_PG_USER}:${OMNIGENT_PG_PASSWORD}@${OPS_TAILNET_IP}:5432/${OMNIGENT_PG_DB}
       ARTIFACT_DIR: /data/artifacts
       HOST: 0.0.0.0
       PORT: "8000"
       OMNIGENT_ADMIN_CREDENTIALS_PATH: /data/admin-credentials
-      # 인증: built-in accounts 모드 (OIDC 아님). 공개 RCE 표면 + 개인 계정 단독 사용
-      # 기준, Google OIDC의 allowed_domains는 도메인 전체를 허용해 실질 게이트가 안 됨
-      # (BON-262). AUTH_ENABLED=1 + OIDC issuer 미설정 = accounts 모드 자동 선택.
+      # 인증: built-in accounts 모드 (OIDC 아님). Google OIDC의 allowed_domains는 도메인
+      # 전체를 허용해 실질 게이트가 안 됨(BON-262). AUTH_ENABLED=1 + OIDC issuer 미설정
+      # = accounts 모드 자동 선택. 노출이 tailnet 전용(L23)으로 줄어든 뒤에도 심층방어로 유지.
       OMNIGENT_AUTH_ENABLED: "1"
-      OMNIGENT_ACCOUNTS_BASE_URL: https://${OMNIGENT_DOMAIN}
+      OMNIGENT_ACCOUNTS_BASE_URL: http://${OMNIGENT_DOMAIN}
       OMNIGENT_ACCOUNTS_COOKIE_SECRET: ${OMNIGENT_ACCOUNTS_COOKIE_SECRET}
       OMNIGENT_ACCOUNTS_AUTO_OPEN: "0"
       # 에이전트 CLI 자격증명 — 하니스가 컨테이너 안에서 실행되므로 env로 주입
@@ -20,6 +23,9 @@ services:
       OPENAI_API_KEY: ${OPENAI_API_KEY}
     volumes:
       - omnigent-data:/data
+    # tailnet 인터페이스에만 바인드 — ops-vm Caddy 가 agent.internal 로 여기까지 reverse_proxy (L23)
+    ports:
+      - "${WORKER_TAILNET_IP}:8000:8000"
     restart: unless-stopped
     mem_limit: 4g
     healthcheck:
@@ -28,12 +34,6 @@ services:
       timeout: 10s
       retries: 3
       start_period: 30s
-    networks:
-      - nexus
 
 volumes:
   omnigent-data:
-
-networks:
-  nexus:
-    external: true

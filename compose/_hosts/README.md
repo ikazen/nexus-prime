@@ -6,7 +6,7 @@
 
 - `ops-vm.yml` — caddy + postgres + registry(+ui) + dnsmasq + monitoring
 - `mac-server.yml` — minio
-- worker-vm — **wrapper 없음**. 인프라 컨테이너 0 (airflow edge worker 만, 별도 repo)
+- `worker-vm.yml` — omnigent (L23 — 위치 격리, ops-vm 심장부에서 이동). airflow edge worker 는 별도 repo
 
 ## 운영
 
