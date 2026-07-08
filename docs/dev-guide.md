@@ -24,6 +24,7 @@
 | Caddy edge | ops-vm | — | — | 443 | — | 모든 외부 라우팅 진입점 |
 | pot-of-greed API | ops-vm | `pot-of-greed-api:8000` | `http://pot-of-greed-api.internal` | — | JWT | 앱 워크로드 (본 repo `compose/pot-of-greed/`). Postgres+Neo4j+Ollama 의존 |
 | pot-of-greed UI | ops-vm | `pot-of-greed-ui:8000` | `http://pot-of-greed-ui.internal` | — | Chainlit auth | 공개 노출 시 Caddyfile `POT_OF_GREED_DOMAIN` 블록 주석 해제 |
+| omnigent | worker-vm | 없음 (nexus 밖) | `http://agent.internal` | — | accounts | meta-harness. 위치·노출 격리는 L23, Postgres 는 ops-vm 을 tailnet 직결 |
 
 **dnsmasq / promtail 은 인프라 plumbing — 워크로드가 직접 호출하지 않음.**
 
