@@ -139,6 +139,10 @@ docker exec grafana grafana cli admin reset-admin-password '<new-password>'
 ssh worker-vm sudo systemctl restart promtail
 ```
 
+## 알려진 benign 이벤트
+
+**ops-vm CPU 스파이크 (매일 06:00~06:15 KST):** `reflexion_rondo_autosubmit` DAG 의 `poll_submissions` 태스크가 이 시간대 실행되며 ~10분간 user-mode CPU 를 포화(2코어 기준 ~98%)시킨다. iowait/swap 없음, 자가 복구, scheduler heartbeat 알람 미발동 — 정상. 인프라 결함 아님, 원인 코드는 `reflexion-rondo`/`airflow-stack` 소관. Grafana 에서 이 그래프 보고 재조사할 필요 없음.
+
 ## Adminer 접속
 
 `http://adminer.internal` — Tailscale 연결 필수.
