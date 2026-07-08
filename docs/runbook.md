@@ -255,11 +255,11 @@ colima stop && colima start --cpu 6 --memory 8
 
 장애 복구 = "인스턴스 재설치" 와 동일 절차 (L18). 위 섹션 참조.
 
-## omnigent 최초 배포 체크리스트 (BON-260~264)
+## omnigent 최초 배포 체크리스트
 
-repo 변경(compose/Caddyfile/env)은 main에 반영 완료. 아래는 실제 공개 노출까지 남은 외부 단계 — 순서대로.
+repo 변경(compose/Caddyfile/env)은 main에 반영 완료. omnigent 는 worker-vm 배치, tailnet 전용 노출(L23) — 아래는 실제 기동까지 남은 외부 단계, 순서대로.
 
-1. **Postgres DB/user 발급** (위 "Postgres DB 발급" 절차, `docs/dev-guide.md` 참조):
+1. **Postgres DB/user 발급** (ops-vm, "Postgres DB 발급" 절차, `docs/dev-guide.md` 참조):
    ```bash
    ssh ops-vm
    docker exec -it postgres psql -U postgres -c "CREATE DATABASE omnigent;"
@@ -267,19 +267,20 @@ repo 변경(compose/Caddyfile/env)은 main에 반영 완료. 아래는 실제 �
    docker exec -it postgres psql -U postgres -c "GRANT ALL ON DATABASE omnigent TO omnigent;"
    docker exec -it postgres psql -U postgres -d omnigent -c "GRANT ALL ON SCHEMA public TO omnigent;"
    ```
-2. **`ops-vm.enc.env`에 실값 주입** (`scripts/add-pog-env.sh` 패턴 — decrypt → append → re-encrypt):
-   `OMNIGENT_PG_PASSWORD`(위 1의 pw), `OMNIGENT_DOMAIN=agent.<your-domain>`,
+2. **`worker-vm.enc.env` 작성** (`compose/_hosts/worker-vm.env.example` 복사 후 SOPS 암호화):
+   `OMNIGENT_PG_PASSWORD`(위 1의 pw), `OPS_TAILNET_IP`, `WORKER_TAILNET_IP`,
+   `OMNIGENT_DOMAIN=agent.internal`,
    `OMNIGENT_ACCOUNTS_COOKIE_SECRET`(`openssl rand -hex 32`),
    `OMNIGENT_ANTHROPIC_API_KEY`, `OPENAI_API_KEY`. 값에 `$`가 있으면 `$$`로 이스케이프.
-3. **DNS A레코드**: `agent.<your-domain>` → ops-vm 예약 공인 IP. NSG 변경 불필요(80/443 이미 개방).
-4. **ghcr.io pull 가능 여부 확인**: `ghcr.io/omnigent-ai/omnigent-server`가 private면
+   tailnet 전용 노출이라 공개 DNS A레코드·NSG 변경 불필요 — dnsmasq 와일드카드가 `agent.internal` 을 자동 해석.
+3. **ghcr.io pull 가능 여부 확인**: `ghcr.io/omnigent-ai/omnigent-server`가 private면
    `echo $GHCR_TOKEN | docker login ghcr.io -u <user> --password-stdin` (`read:packages`) 먼저.
-5. **배포**: `git push` (이미 완료) → `bash scripts/deploy-ops-vm.sh`
-6. **상태 확인**: `docker logs omnigent`로 부팅 로그(admin 비번 출력 등) 확인.
+4. **배포**: `git push` (이미 완료) → `bash scripts/deploy-worker-vm.sh`
+5. **상태 확인**: `docker logs omnigent`로 부팅 로그(admin 비번 출력 등) 확인.
 
 **E2E 검증:**
-- `bash scripts/status.sh` + `docker ps | grep omnigent` healthy
-- `https://agent.<your-domain>` 접속 → Let's Encrypt TLS 정상 발급, accounts 로그인 화면
+- `docker compose -f compose/_hosts/worker-vm.yml --env-file compose/_hosts/worker-vm.env ps` healthy
+- tailnet 기기에서 `http://agent.internal` 접속 → accounts 로그인 화면 (HTTP — accounts 쿠키가 Secure 강제인지 확인, 문제 시 Caddy 내부 CA https 전환 검토)
 - 대화 1건 생성 → `docker restart omnigent` → 재접속 시 대화·설정 유지 (Postgres + `/data` 영속)
 - 웹 UI에서 Claude Code·OpenCode 에이전트를 동일 세션에 추가 → 파일읽기/셸 실행 프롬프트로 동시 동작 확인
-- `docker stats omnigent neo4j prometheus` — 12GB 공유 호스트 자원 경합 감시. 스왑 과다 시 `mem_limit` 또는 워크로드 분리 검토 (L22)
+- worker-vm → ops-vm:5432 tailnet 도달성: `nc -z <OPS_TAILNET_IP> 5432`
