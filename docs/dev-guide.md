@@ -24,7 +24,7 @@
 | Caddy edge | ops-vm | — | — | 443 | — | 모든 외부 라우팅 진입점 |
 | pot-of-greed API | ops-vm | `pot-of-greed-api:8000` | `http://pot-of-greed-api.internal` | — | JWT | 앱 워크로드 (본 repo `compose/pot-of-greed/`). Postgres+Neo4j+Ollama 의존 |
 | pot-of-greed UI | ops-vm | `pot-of-greed-ui:8000` | `http://pot-of-greed-ui.internal` | — | Chainlit auth | 공개 노출 시 Caddyfile `POT_OF_GREED_DOMAIN` 블록 주석 해제 |
-| omnigent | worker-vm | 없음 (nexus 밖) | `http://agent.internal` | — | accounts | meta-harness. 위치·노출 격리는 L23, Postgres 는 ops-vm 을 tailnet 직결 |
+| omnigent | worker-vm | 없음 (nexus 밖) | `http://agent.internal` | — | single-user (L25) | meta-harness control-plane. harness 는 실행 안 함 — 실제 실행은 `omnigent-host` 러너(같은 compose, 인바운드 없음). 위치·노출 격리는 L23, Postgres 는 ops-vm 을 tailnet 직결 |
 
 **dnsmasq / promtail 은 인프라 plumbing — 워크로드가 직접 호출하지 않음.**
 
@@ -193,8 +193,13 @@ docker exec -it postgres psql -U postgres -d <target_db> -c "ALTER DEFAULT PRIVI
 ## omnigent git-worker 셋업
 
 omnigent 를 "외주 직원"처럼 쓰는 에이전트(`compose/omnigent/agents/git-worker/`) —
-컨테이너 안에서 repo 를 clone·수정·push·PR 생성까지 하되, 로컬 파일·임의
-네트워크는 격리한다. 설계 근거: `docs/decisions.md` L24.
+repo 를 clone·수정·push·PR 생성까지 하되, 로컬 파일·임의 네트워크는 격리한다.
+설계 근거: `docs/decisions.md` L24, L25.
+
+**중요**: 이 에이전트가 실제로 실행되는 곳은 `omnigent` 서버 컨테이너가 **아니라
+`omnigent-host` 러너 컨테이너**다 (L25 — 서버는 control-plane 전용, harness 를
+실행하지 않는다). 아래 `credential_proxy`/local tool 이 읽는 env 는 전부
+`omnigent-host` 의 env 여야 한다.
 
 ### GitHub 인증 (fine-grained PAT)
 
@@ -203,10 +208,11 @@ omnigent 를 "외주 직원"처럼 쓰는 에이전트(`compose/omnigent/agents/
    - **Permissions**: Contents = Read and write, Pull requests = Read and write,
      Metadata = Read-only (자동). 그 외 전부 No access
    - **Expiration**: 짧게 설정 + 주기적 로테이션
-2. 값을 `OMNIGENT_GH_TOKEN` 으로 `worker-vm.enc.env` 에 저장 (SOPS 재암호화).
+2. 값을 `OMNIGENT_GH_TOKEN` 으로 `worker-vm.enc.env` 에 저장 (SOPS 재암호화) —
+   `compose/omnigent/compose.yml` 의 `omnigent-host` 서비스가 소비한다.
 
 에이전트 안에서 이 토큰은 원문으로 노출되지 않는다 — `os_env.sandbox.credential_proxy`
-(`gh_basic` preset)가 parent 프로세스(omnigent 컨테이너)에서만 실제 값을 읽고,
+(`gh_basic` preset)가 parent 프로세스(`omnigent-host` 컨테이너)에서만 실제 값을 읽고,
 샌드박스 안 `git`/`gh` 에는 합성 placeholder 만 보인다. egress 프록시가
 `github.com`/`api.github.com` 으로 나가는 요청에만 실제 토큰을 붙인다 —
 샌드박스가 RCE 로 뚫려도 PAT 자체는 유출되지 않는다. `credential_proxy` 는
@@ -219,12 +225,33 @@ TLS 검증 방식 때문에 미지원 — worker-vm 은 Linux 라 해당 없음)
 `egress_rules` 를 켜면(위) 샌드박스의 유일한 아웃바운드 경로가 HTTP(S) MITM
 프록시가 되므로, Postgres 같은 raw TCP 는 샌드박스 안에서 직접 나갈 수 없다.
 그래서 DB 조회는 `os_env` 밖의 local tool 로 둔다 — omnigent 의 local tool 은
-(별도 `container_image` 지정이 없으면) parent 프로세스에서 실행되므로
-`OMNIGENT_RONDO_RO_URL`/`OMNIGENT_POG_RO_URL`(`omnigent_ro` role DSN, 위 절차로
-발급)을 직접 읽어도 안전하다 — 에이전트는 tool 이 반환하는 결과 행만 본다.
+(별도 `container_image` 지정이 없으면) parent 프로세스(`omnigent-host` 컨테이너)에서
+실행되므로 `OMNIGENT_RONDO_RO_URL`/`OMNIGENT_POG_RO_URL`(`omnigent_ro` role DSN, 위
+절차로 발급)을 직접 읽어도 안전하다 — 에이전트는 tool 이 반환하는 결과 행만 본다.
 구현: `compose/omnigent/agents/git-worker/tools/python/query_rondo_readonly.py`,
 `query_pog_readonly.py` (각각 `@tool` 데코레이터, 파일명 = tool 이름 —
 `omnigent/spec/parser.py::_discover_local_tools`).
+
+### omnigent host 이미지 빌드
+
+`omnigent-host` 는 vendor 이미지(`ghcr.io/omnigent-ai/omnigent-host`)에 opencode 만
+얹은 얇은 커스텀 이미지 — claude-code/codex/pi/kiro-cli 는 vendor 이미지에 이미
+baked-in, opencode 만 없어서 추가한다 (`compose/omnigent/host/Dockerfile`).
+
+**worker-vm(ARM64 네이티브)에서 빌드할 것** — vendor 이미지의 linux/arm64 매니페스트
+존재 여부, `opencode-ai` npm 패키지의 네이티브 의존성이 arm64 에서 빌드되는지 확인
+안 된 상태라 QEMU 에뮬레이션보다 네이티브 빌드로 바로 검증하는 게 안전:
+
+```bash
+ssh worker-vm
+cd ~/nexus-prime
+docker build --build-arg OMNIGENT_HOST_TAG=<tag> \
+  -t registry.internal:5000/omnigent-host:<tag> compose/omnigent/host
+docker push registry.internal:5000/omnigent-host:<tag>
+```
+
+Ollama Cloud 등 provider 설정은 이미지가 아니라 `compose/omnigent/host/config.yaml`
+(`/root/.omnigent/config.yaml` 로 마운트)에서 관리한다 — 재빌드 불필요.
 
 ## 신규 서비스 추가 체크리스트
 

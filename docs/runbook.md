@@ -280,27 +280,36 @@ repo 변경(compose/Caddyfile/env)은 main에 반영 완료. omnigent 는 worker
     ```
 1b. **[git-worker] fine-grained PAT 발급** — `docs/dev-guide.md` "omnigent git-worker 셋업" 참조
     (대상 repo 만 Contents=RW, Pull requests=RW, Metadata=RO, 짧은 만료).
+1c. **[host] omnigent-host 이미지 빌드+push** — `docs/dev-guide.md` "omnigent host 이미지 빌드" 참조
+    (worker-vm ARM64 네이티브 빌드 권장, `registry.internal:5000/omnigent-host:<tag>`). worker-vm 에
+    `insecure-registries` 미등록이면 dev-guide "Private Registry" 절차 선행.
 2. **`worker-vm.enc.env` 작성** (`compose/_hosts/worker-vm.env.example` 복사 후 SOPS 암호화):
    `OMNIGENT_PG_PASSWORD`(위 1의 pw), `OPS_TAILNET_IP`, `WORKER_TAILNET_IP`,
-   `OMNIGENT_DOMAIN=agent.internal`,
-   `OMNIGENT_ACCOUNTS_COOKIE_SECRET`(`openssl rand -hex 32`),
-   `OMNIGENT_ANTHROPIC_API_KEY`, `OPENAI_API_KEY`,
+   `OMNIGENT_HOST_TAG`(위 1c 태그),
+   `OMNIGENT_ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `OLLAMA_API_KEY`,
    `OMNIGENT_GH_TOKEN`(위 1b), `OMNIGENT_RONDO_RO_URL`/`OMNIGENT_POG_RO_URL`(위 1a).
    값에 `$`가 있으면 `$$`로 이스케이프.
    tailnet 전용 노출이라 공개 DNS A레코드·NSG 변경 불필요 — dnsmasq 와일드카드가 `agent.internal` 을 자동 해석.
+   (accounts 관련 키는 더 이상 없음 — single-user 모드, L25.)
 3. **ghcr.io pull 가능 여부 확인**: `ghcr.io/omnigent-ai/omnigent-server`가 private면
    `echo $GHCR_TOKEN | docker login ghcr.io -u <user> --password-stdin` (`read:packages`) 먼저.
 4. **배포**: `git push` (이미 완료) → `bash scripts/deploy-worker-vm.sh`
-5. **상태 확인**: `docker logs omnigent`로 부팅 로그(admin 비번 출력 등) 확인.
+5. **상태 확인**: `docker logs omnigent`로 부팅 로그 확인, `docker logs omnigent-host`로 서버 터널
+   등록(runner registered) 로그 확인.
 6. **[git-worker] 에이전트 스펙 업로드**: `compose/omnigent/agents/git-worker/` 를 omnigent 서버에
    등록 (서버는 spec 을 업로드 받아 저장하는 방식 — `omnigent/server/README.md` "Accepts agent specs,
-   stores them durably". 정확한 업로드 커맨드/API 는 omnigent CLI·admin UI 확인 필요, 미검증).
+   stores them durably". 정확한 업로드 커맨드/API 는 omnigent CLI·admin UI 확인 필요, 미검증. local
+   tool 파일(`tools/python/query_*_readonly.py`)이 omnigent-host 러너까지 어떻게 전달되는지도
+   미검증 — `docs/decisions.md` L25 배포 전 검증 항목 참조).
 
 **E2E 검증:**
-- `docker compose -f compose/_hosts/worker-vm.yml --env-file compose/_hosts/worker-vm.env ps` healthy
-- tailnet 기기에서 `http://agent.internal` 접속 → accounts 로그인 화면 (HTTP — accounts 쿠키가 Secure 강제인지 확인, 문제 시 Caddy 내부 CA https 전환 검토)
+- `docker compose -f compose/_hosts/worker-vm.yml --env-file compose/_hosts/worker-vm.env ps` — `omnigent`,
+  `omnigent-host` 둘 다 healthy/running
+- tailnet 기기에서 `http://agent.internal` 접속 → single-user 모드라 로그인 화면 없이 바로 진입하는지 확인
 - 대화 1건 생성 → `docker restart omnigent` → 재접속 시 대화·설정 유지 (Postgres + `/data` 영속)
-- 웹 UI에서 Claude Code·OpenCode 에이전트를 동일 세션에 추가 → 파일읽기/셸 실행 프롬프트로 동시 동작 확인
+- 웹 UI에서 claude-native·codex·opencode 하니스 세션을 각각 실행 → 정상 동작 확인 (opencode 는 커스텀
+  이미지 반영 여부 재확인 포인트)
+- ollama-cloud provider(`compose/omnigent/host/config.yaml`)로 모델 응답 확인
 - worker-vm → ops-vm:5432 tailnet 도달성: `nc -z <OPS_TAILNET_IP> 5432`
 - **[git-worker]** git-worker 에이전트에 "repo X clone, 사소한 변경 후 브랜치 push, PR 생성" 지시 →
   GitHub 에 브랜치+PR 생성 확인, 커밋 author = PAT 소유 계정
