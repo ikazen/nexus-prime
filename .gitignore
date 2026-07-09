@@ -24,6 +24,10 @@ Thumbs.db
 *.swp
 *.swo
 
+# python (omnigent local tools 등)
+__pycache__/
+*.pyc
+
 # secrets backup
 secrets-backup.md
 

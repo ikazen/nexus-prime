@@ -267,16 +267,34 @@ repo 변경(compose/Caddyfile/env)은 main에 반영 완료. omnigent 는 worker
    docker exec -it postgres psql -U postgres -c "GRANT ALL ON DATABASE omnigent TO omnigent;"
    docker exec -it postgres psql -U postgres -d omnigent -c "GRANT ALL ON SCHEMA public TO omnigent;"
    ```
+1a. **[git-worker] `omnigent_ro` read-only role 발급** (`docs/dev-guide.md` "Postgres read-only role 발급"
+    절차, 대상 DB = reflexion-rondo DB + pot-of-greed DB):
+    ```bash
+    ssh ops-vm
+    docker exec -it postgres psql -U postgres -c "CREATE USER omnigent_ro WITH PASSWORD '<pw>';"
+    # rondo, pot-of-greed 각각 반복
+    docker exec -it postgres psql -U postgres -c "GRANT CONNECT ON DATABASE <rondo_db> TO omnigent_ro;"
+    docker exec -it postgres psql -U postgres -d <rondo_db> -c "GRANT USAGE ON SCHEMA public TO omnigent_ro;"
+    docker exec -it postgres psql -U postgres -d <rondo_db> -c "GRANT SELECT ON ALL TABLES IN SCHEMA public TO omnigent_ro;"
+    docker exec -it postgres psql -U postgres -d <rondo_db> -c "ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO omnigent_ro;"
+    ```
+1b. **[git-worker] fine-grained PAT 발급** — `docs/dev-guide.md` "omnigent git-worker 셋업" 참조
+    (대상 repo 만 Contents=RW, Pull requests=RW, Metadata=RO, 짧은 만료).
 2. **`worker-vm.enc.env` 작성** (`compose/_hosts/worker-vm.env.example` 복사 후 SOPS 암호화):
    `OMNIGENT_PG_PASSWORD`(위 1의 pw), `OPS_TAILNET_IP`, `WORKER_TAILNET_IP`,
    `OMNIGENT_DOMAIN=agent.internal`,
    `OMNIGENT_ACCOUNTS_COOKIE_SECRET`(`openssl rand -hex 32`),
-   `OMNIGENT_ANTHROPIC_API_KEY`, `OPENAI_API_KEY`. 값에 `$`가 있으면 `$$`로 이스케이프.
+   `OMNIGENT_ANTHROPIC_API_KEY`, `OPENAI_API_KEY`,
+   `OMNIGENT_GH_TOKEN`(위 1b), `OMNIGENT_RONDO_RO_URL`/`OMNIGENT_POG_RO_URL`(위 1a).
+   값에 `$`가 있으면 `$$`로 이스케이프.
    tailnet 전용 노출이라 공개 DNS A레코드·NSG 변경 불필요 — dnsmasq 와일드카드가 `agent.internal` 을 자동 해석.
 3. **ghcr.io pull 가능 여부 확인**: `ghcr.io/omnigent-ai/omnigent-server`가 private면
    `echo $GHCR_TOKEN | docker login ghcr.io -u <user> --password-stdin` (`read:packages`) 먼저.
 4. **배포**: `git push` (이미 완료) → `bash scripts/deploy-worker-vm.sh`
 5. **상태 확인**: `docker logs omnigent`로 부팅 로그(admin 비번 출력 등) 확인.
+6. **[git-worker] 에이전트 스펙 업로드**: `compose/omnigent/agents/git-worker/` 를 omnigent 서버에
+   등록 (서버는 spec 을 업로드 받아 저장하는 방식 — `omnigent/server/README.md` "Accepts agent specs,
+   stores them durably". 정확한 업로드 커맨드/API 는 omnigent CLI·admin UI 확인 필요, 미검증).
 
 **E2E 검증:**
 - `docker compose -f compose/_hosts/worker-vm.yml --env-file compose/_hosts/worker-vm.env ps` healthy
@@ -284,3 +302,9 @@ repo 변경(compose/Caddyfile/env)은 main에 반영 완료. omnigent 는 worker
 - 대화 1건 생성 → `docker restart omnigent` → 재접속 시 대화·설정 유지 (Postgres + `/data` 영속)
 - 웹 UI에서 Claude Code·OpenCode 에이전트를 동일 세션에 추가 → 파일읽기/셸 실행 프롬프트로 동시 동작 확인
 - worker-vm → ops-vm:5432 tailnet 도달성: `nc -z <OPS_TAILNET_IP> 5432`
+- **[git-worker]** git-worker 에이전트에 "repo X clone, 사소한 변경 후 브랜치 push, PR 생성" 지시 →
+  GitHub 에 브랜치+PR 생성 확인, 커밋 author = PAT 소유 계정
+- **[git-worker]** `OMNIGENT_GH_TOKEN` 을 일부러 비운 상태로 재기동 → push 실패(fail-closed) 확인
+- **[git-worker]** 에이전트에게 워크스페이스 밖 경로(`/etc/passwd`, `/data/artifacts` 등) 읽기 시도 지시 → 차단 확인
+- **[git-worker]** 에이전트에게 github.com/api.github.com 외 도메인 접근 시도 지시(예: `curl https://example.com`) → 차단 확인
+- **[git-worker]** `query_rondo_readonly`/`query_pog_readonly` 로 SELECT 성공, 비-SELECT(INSERT 등) 시도 시 tool 자체 거부 + DB role 도 거부 이중 확인

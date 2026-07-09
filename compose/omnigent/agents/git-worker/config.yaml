@@ -1,0 +1,83 @@
+spec_version: 1
+name: git-worker
+description: >
+  외주 직원처럼 쓰는 코딩 에이전트. 지정된 GitHub repo 를 clone 해 작업하고
+  브랜치 push + PR 생성까지 수행한다. 리뷰·머지는 사람이 한다.
+
+executor:
+  type: omnigent
+  config:
+    harness: claude-native
+    # 헤드리스 워커라 ApprovalCard 를 받을 사람이 없음. auto = 프롬프트 없이
+    # 자동 승인 (managed settings 아래에서도 허용되는 모드). 대신 격리(샌드박스+
+    # egress allowlist+credential_proxy)와 guardrails.blast_radius 로 방어.
+    permission_mode: auto
+
+prompt: |
+  You are a contractor coding agent working inside an isolated sandbox on
+  worker-vm. You do not have access to any host filesystem outside your own
+  workspace, and no network access beyond GitHub and two read-only database
+  query tools.
+
+  Git / GitHub:
+  - Clone only the repo(s) named in your task. Work in your workspace dir.
+  - Never push to a protected branch (e.g. main) or force-push.
+  - When your change is ready and verified (tests/lint/typecheck for the
+    code you touched), push your branch and open a PR with `gh pr create`
+    (clear title, what changed, how you verified). A human reviews and
+    merges — you never merge your own PR.
+  - `git`/`gh` are already authenticated for github.com and api.github.com;
+    do not look for or ask for a token.
+
+  Database (optional, only if the task needs it):
+  - Two read-only query tools are available: `query_rondo_readonly` and
+    `query_pog_readonly`. Use them for SELECT-only lookups. Any other
+    network access to a database will fail — these tools are the only path.
+
+  Always report what you changed (file:line) and how you verified it.
+
+os_env:
+  type: caller_process
+  cwd: /data/workspace
+  sandbox:
+    type: linux_bwrap
+    write_paths:
+      - .
+    allow_network: true
+    # L7 egress allowlist — default-deny HTTP(S) MITM proxy, github.com 트래픽만.
+    # 이 필드가 non-empty 가 되는 순간 MITM 프록시가 유일한 아웃바운드 경로가
+    # 되므로(egress_rules 는 HTTP(S) 전용 DSL), Postgres 같은 raw TCP 는 이
+    # 경로로 못 나간다 — DB 조회는 그래서 os_env 밖의 local tool 로 분리했다
+    # (tools/python/query_*_readonly.py, parent 프로세스에서 실행되어 네트워크
+    # 네임스페이스 격리 자체를 우회).
+    egress_rules:
+      - "* github.com/**"
+      - "* api.github.com/**"
+      - "* codeload.github.com/**"
+    # 실제 PAT 는 parent 프로세스(omnigent 컨테이너)의 OMNIGENT_GH_TOKEN 에만
+    # 존재. 샌드박스 안 git/gh 는 gh_basic 이 주입하는 합성 placeholder 만
+    # 본다 — egress 프록시가 github.com/api.github.com 으로 나가는 요청에만
+    # 실제 토큰을 붙인다. RCE 로 샌드박스가 뚫려도 PAT 자체는 유출되지 않는다.
+    credential_proxy:
+      - type: gh_basic
+        source:
+          env: OMNIGENT_GH_TOKEN
+
+guardrails:
+  policies:
+    # polly 의 coding sub-agent 와 동일한 안전장치 재사용 (examples/polly/agents/claude_code/config.yaml).
+    # push/PR 생성(gate_pushes: false)은 허용하되 force-push·rm -rf /·원격 ref 로
+    # hard-reset 같은 파국적 조작만 차단.
+    blast_radius:
+      type: function
+      on: [tool_call]
+      function:
+        path: omnigent.inner.nessie.policies.blast_radius
+        arguments:
+          gate_pushes: false
+
+# query_rondo_readonly / query_pog_readonly tool 은 여기 선언하지 않는다 —
+# tools/python/*.py 는 파일명 그대로 자동 discover 되는 local tool 이라
+# (omnigent/spec/parser.py _discover_local_tools), 여기서 다시 선언하면
+# 중복/충돌한다. 구현: tools/python/query_rondo_readonly.py,
+# tools/python/query_pog_readonly.py (각각 @tool 데코레이터).

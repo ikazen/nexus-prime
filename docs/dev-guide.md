@@ -170,7 +170,7 @@ docker exec -it postgres psql -U postgres -c "GRANT ALL ON SCHEMA public TO <use
 
 ### Postgres read-only role 발급
 
-다른 서비스 DB 를 읽기만 해야 하는 경우 (예: omnigent 의 cross-DB 조회) — 전용 DB/user 대신 대상 DB 에 read-only role 을 추가로 발급:
+다른 서비스 DB 를 읽기만 해야 하는 경우 (예: omnigent 의 cross-DB 조회 — 실사용: `omnigent_ro` 가 reflexion-rondo DB, pot-of-greed DB 에 각각 발급됨) — 전용 DB/user 대신 대상 DB 에 read-only role 을 추가로 발급:
 ```bash
 ssh ops-vm
 docker exec -it postgres psql -U postgres -c "CREATE USER <svc>_ro WITH PASSWORD '<pw>';"
@@ -189,6 +189,42 @@ docker exec -it postgres psql -U postgres -d <target_db> -c "ALTER DEFAULT PRIVI
 | 원격 상태 파악 | SSH | Prometheus/Loki 읽기 |
 | 인프라 변경(build/push/GC) | docker.sock | airflow DAG 트리거 (ops 큐 전용, L21) |
 | 타 서비스 DB 읽기 | superuser / 광범위 GRANT | 위 read-only role |
+
+## omnigent git-worker 셋업
+
+omnigent 를 "외주 직원"처럼 쓰는 에이전트(`compose/omnigent/agents/git-worker/`) —
+컨테이너 안에서 repo 를 clone·수정·push·PR 생성까지 하되, 로컬 파일·임의
+네트워크는 격리한다. 설계 근거: `docs/decisions.md` L24.
+
+### GitHub 인증 (fine-grained PAT)
+
+1. https://github.com/settings/personal-access-tokens/new 에서 발급:
+   - **Repository access**: 대상 repo 만 선택 (Resource owner 는 본인 계정)
+   - **Permissions**: Contents = Read and write, Pull requests = Read and write,
+     Metadata = Read-only (자동). 그 외 전부 No access
+   - **Expiration**: 짧게 설정 + 주기적 로테이션
+2. 값을 `OMNIGENT_GH_TOKEN` 으로 `worker-vm.enc.env` 에 저장 (SOPS 재암호화).
+
+에이전트 안에서 이 토큰은 원문으로 노출되지 않는다 — `os_env.sandbox.credential_proxy`
+(`gh_basic` preset)가 parent 프로세스(omnigent 컨테이너)에서만 실제 값을 읽고,
+샌드박스 안 `git`/`gh` 에는 합성 placeholder 만 보인다. egress 프록시가
+`github.com`/`api.github.com` 으로 나가는 요청에만 실제 토큰을 붙인다 —
+샌드박스가 RCE 로 뚫려도 PAT 자체는 유출되지 않는다. `credential_proxy` 는
+`os_env.sandbox.egress_rules` 가 non-empty 여야 동작하고 `sandbox.type` 이
+`linux_bwrap`/`darwin_seatbelt` 여야 한다 (macOS 의 `gh_basic` 은 Go 바이너리
+TLS 검증 방식 때문에 미지원 — worker-vm 은 Linux 라 해당 없음).
+
+### DB read-only 조회
+
+`egress_rules` 를 켜면(위) 샌드박스의 유일한 아웃바운드 경로가 HTTP(S) MITM
+프록시가 되므로, Postgres 같은 raw TCP 는 샌드박스 안에서 직접 나갈 수 없다.
+그래서 DB 조회는 `os_env` 밖의 local tool 로 둔다 — omnigent 의 local tool 은
+(별도 `container_image` 지정이 없으면) parent 프로세스에서 실행되므로
+`OMNIGENT_RONDO_RO_URL`/`OMNIGENT_POG_RO_URL`(`omnigent_ro` role DSN, 위 절차로
+발급)을 직접 읽어도 안전하다 — 에이전트는 tool 이 반환하는 결과 행만 본다.
+구현: `compose/omnigent/agents/git-worker/tools/python/query_rondo_readonly.py`,
+`query_pog_readonly.py` (각각 `@tool` 데코레이터, 파일명 = tool 이름 —
+`omnigent/spec/parser.py::_discover_local_tools`).
 
 ## 신규 서비스 추가 체크리스트
 

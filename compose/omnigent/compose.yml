@@ -21,6 +21,19 @@ services:
       # 에이전트 CLI 자격증명 — 하니스가 컨테이너 안에서 실행되므로 env로 주입
       OMNIGENT_ANTHROPIC_API_KEY: ${OMNIGENT_ANTHROPIC_API_KEY}
       OPENAI_API_KEY: ${OPENAI_API_KEY}
+      # git-worker 에이전트(agents/git-worker/) 전용. 실제 값은 parent 프로세스
+      # (이 컨테이너)에만 존재 — 샌드박스 안 에이전트로는 전달되지 않는다.
+      #   - OMNIGENT_GH_TOKEN: fine-grained PAT. os_env.sandbox.credential_proxy
+      #     (gh_basic) 가 이 env 를 읽어 github.com/api.github.com 아웃바운드에만
+      #     실제 토큰을 주입한다 — 샌드박스는 합성 placeholder 만 봄.
+      #   - OMNIGENT_RONDO_RO_URL / OMNIGENT_POG_RO_URL: omnigent_ro role
+      #     (read-only, dev-guide "Postgres read-only role 발급") DSN. local tool
+      #     (tools/python/query_*_readonly.py) 이 parent 프로세스에서 직접 읽는다 —
+      #     os_env 샌드박스는 egress_rules 가 HTTP(S) 전용이라 어차피 Postgres TCP 를
+      #     못 나간다.
+      OMNIGENT_GH_TOKEN: ${OMNIGENT_GH_TOKEN}
+      OMNIGENT_RONDO_RO_URL: ${OMNIGENT_RONDO_RO_URL}
+      OMNIGENT_POG_RO_URL: ${OMNIGENT_POG_RO_URL}
     volumes:
       - omnigent-data:/data
     # tailnet 인터페이스에만 바인드 — ops-vm Caddy 가 agent.internal 로 여기까지 reverse_proxy (L23)
