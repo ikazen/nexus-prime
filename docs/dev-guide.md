@@ -238,9 +238,10 @@ TLS 검증 방식 때문에 미지원 — worker-vm 은 Linux 라 해당 없음)
 얹은 얇은 커스텀 이미지 — claude-code/codex/pi/kiro-cli 는 vendor 이미지에 이미
 baked-in, opencode 만 없어서 추가한다 (`compose/omnigent/host/Dockerfile`).
 
-**worker-vm(ARM64 네이티브)에서 빌드할 것** — vendor 이미지의 linux/arm64 매니페스트
-존재 여부, `opencode-ai` npm 패키지의 네이티브 의존성이 arm64 에서 빌드되는지 확인
-안 된 상태라 QEMU 에뮬레이션보다 네이티브 빌드로 바로 검증하는 게 안전:
+worker-vm 은 ARM64(OCI A1.Flex) — vendor 이미지는 `docker manifest inspect
+ghcr.io/omnigent-ai/omnigent-host:latest` 로 linux/arm64 지원 확인됨. `opencode-ai`
+npm 패키지의 네이티브 의존성이 arm64 에서 빌드되는지는 미확인이라, QEMU 에뮬레이션보다
+**worker-vm 네이티브 빌드**로 바로 검증하는 게 안전:
 
 ```bash
 ssh worker-vm
@@ -252,6 +253,40 @@ docker push registry.internal:5000/omnigent-host:<tag>
 
 Ollama Cloud 등 provider 설정은 이미지가 아니라 `compose/omnigent/host/config.yaml`
 (`/root/.omnigent/config.yaml` 로 마운트)에서 관리한다 — 재빌드 불필요.
+
+### omnigent 하니스 구독 인증
+
+Claude/Codex 는 API 키가 아니라 **웹 구독**을 쓴다 (`docs/decisions.md` L26). 둘의
+메커니즘이 다르다 — vendor 문서(`deploy/modal/README.md` "Common setups") 기준.
+
+**Claude — portable, 컨테이너 로그인 불필요:**
+
+```bash
+# 로컬 머신(Claude Code CLI 로그인 되어 있는 곳)에서 1회
+claude setup-token
+```
+
+출력된 토큰을 `CLAUDE_CODE_OAUTH_TOKEN` 으로 `worker-vm.enc.env` 에 저장. `ANTHROPIC_API_KEY`
+/ `OMNIGENT_ANTHROPIC_API_KEY` 와 동시에 설정하지 말 것 — raw API 키가 우선 인식되어
+구독 대신 종량 과금으로 갈 수 있다.
+
+**Codex — 개인 ChatGPT Plus/Pro 는 헤드리스 토큰이 없음:**
+
+vendor 문서가 명시적으로 지원 안 함이라고 못박는다 — `~/.codex/auth.json` 이 사실상
+1회용 refresh token이라 파일을 복사하거나 시크릿으로 주입하면 서로 무효화된다
+(`CODEX_ACCESS_TOKEN` 은 ChatGPT Business/Enterprise 워크스페이스 전용, 관리자 콘솔에서
+발급 — 개인 플랜엔 해당 없음). 대신 **컨테이너 안에서 직접 로그인**하고 그 결과를
+볼륨(`omnigent-host-codex-auth:/root/.codex`)으로 영속시킨다:
+
+1. ChatGPT → Settings → Security 에서 device-code login 활성화 (사전 1회, 웹에서 직접)
+2. omnigent-host 배포 후:
+   ```bash
+   docker exec -it omnigent-host codex login --device-auth
+   ```
+   화면에 뜨는 코드/URL 로 브라우저에서 인증 완료.
+3. 컨테이너 재기동 후에도 `/root/.codex` 볼륨이 살아있으니 재로그인 불필요 —
+   `docker compose down`(볼륨 유지) 은 안전, `docker volume rm omnigent-host-codex-auth`
+   하면 다시 로그인해야 함.
 
 ## 신규 서비스 추가 체크리스트
 

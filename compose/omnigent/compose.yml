@@ -45,9 +45,19 @@ services:
       omnigent:
         condition: service_healthy
     environment:
-      # 하니스가 실제로 이 컨테이너에서 실행되므로 하니스 인증은 여기(server 아님).
-      OMNIGENT_ANTHROPIC_API_KEY: ${OMNIGENT_ANTHROPIC_API_KEY}
-      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      # 하니스 인증 — 웹 구독 사용(API 키 아님, L26). 실제로 이 컨테이너에서 하니스가
+      # 실행되므로 여기(server 아님).
+      #   - Claude: `claude setup-token`(로컬 1회 브라우저 인증)으로 만든 장기 토큰을
+      #     CLAUDE_CODE_OAUTH_TOKEN 으로 주입 — 컨테이너 안에서 로그인 불필요, portable.
+      #     ANTHROPIC_API_KEY/OMNIGENT_ANTHROPIC_API_KEY 와 동시에 설정하지 말 것 —
+      #     raw API 키가 우선 인식되어 구독 대신 종량 과금으로 갈 수 있음.
+      #   - Codex: ChatGPT **개인 Plus/Pro** 플랜은 헤드리스 토큰이 없음(vendor 문서 —
+      #     `~/.codex/auth.json` 이 사실상 1회용 refresh token이라 시크릿으로 주입 불가).
+      #     대신 배포 후 1회 `docker exec -it omnigent-host codex login --device-auth`
+      #     로 컨테이너 안에서 직접 로그인하고, 그 결과를 아래 볼륨(/root/.codex)으로
+      #     영속시킨다 (ChatGPT → Settings → Security 에서 device-code login 선행 활성화
+      #     필요). CODEX_ACCESS_TOKEN 은 Business/Enterprise 워크스페이스 전용이라 해당 없음.
+      CLAUDE_CODE_OAUTH_TOKEN: ${CLAUDE_CODE_OAUTH_TOKEN}
       OLLAMA_API_KEY: ${OLLAMA_API_KEY}
       # git-worker 에이전트(agents/git-worker/) 전용. 실제 값은 이 컨테이너(하니스가
       # 도는 러너의 parent 프로세스)에만 존재 — 샌드박스 안 에이전트로는 전달되지 않는다.
@@ -66,9 +76,12 @@ services:
       # provider 설정(Ollama Cloud 등). host 는 root 로 실행됨.
       - ./host/config.yaml:/root/.omnigent/config.yaml:ro
       - omnigent-host-workspace:/data/workspace
+      # Codex 개인 플랜 로그인 영속 — 위 주석 참조. `codex login` 이 여기 쓴다.
+      - omnigent-host-codex-auth:/root/.codex
     restart: unless-stopped
     mem_limit: 4g
 
 volumes:
   omnigent-data:
   omnigent-host-workspace:
+  omnigent-host-codex-auth:

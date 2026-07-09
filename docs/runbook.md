@@ -281,22 +281,29 @@ repo 변경(compose/Caddyfile/env)은 main에 반영 완료. omnigent 는 worker
 1b. **[git-worker] fine-grained PAT 발급** — `docs/dev-guide.md` "omnigent git-worker 셋업" 참조
     (대상 repo 만 Contents=RW, Pull requests=RW, Metadata=RO, 짧은 만료).
 1c. **[host] omnigent-host 이미지 빌드+push** — `docs/dev-guide.md` "omnigent host 이미지 빌드" 참조
-    (worker-vm ARM64 네이티브 빌드 권장, `registry.internal:5000/omnigent-host:<tag>`). worker-vm 에
-    `insecure-registries` 미등록이면 dev-guide "Private Registry" 절차 선행.
+    (worker-vm ARM64 네이티브 빌드, `registry.internal:5000/omnigent-host:<tag>` — arm64 매니페스트
+    지원은 확인됨). worker-vm 에 `insecure-registries` 미등록이면 dev-guide "Private Registry"
+    절차 선행.
+1d. **[host] Claude 구독 토큰 발급** — `docs/dev-guide.md` "omnigent 하니스 구독 인증" 참조:
+    로컬에서 `claude setup-token` 1회 실행, 출력 토큰을 `CLAUDE_CODE_OAUTH_TOKEN` 으로 보관.
+    (Codex 는 배포 후 6번 단계에서 컨테이너 안 로그인 — 여기서 준비할 게 없음.)
 2. **`worker-vm.enc.env` 작성** (`compose/_hosts/worker-vm.env.example` 복사 후 SOPS 암호화):
    `OMNIGENT_PG_PASSWORD`(위 1의 pw), `OPS_TAILNET_IP`, `WORKER_TAILNET_IP`,
    `OMNIGENT_HOST_TAG`(위 1c 태그),
-   `OMNIGENT_ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `OLLAMA_API_KEY`,
+   `CLAUDE_CODE_OAUTH_TOKEN`(위 1d), `OLLAMA_API_KEY`,
    `OMNIGENT_GH_TOKEN`(위 1b), `OMNIGENT_RONDO_RO_URL`/`OMNIGENT_POG_RO_URL`(위 1a).
    값에 `$`가 있으면 `$$`로 이스케이프.
    tailnet 전용 노출이라 공개 DNS A레코드·NSG 변경 불필요 — dnsmasq 와일드카드가 `agent.internal` 을 자동 해석.
-   (accounts 관련 키는 더 이상 없음 — single-user 모드, L25.)
+   (accounts 관련 키는 더 이상 없음 — single-user 모드, L25. Codex API 키도 없음 — 구독 인증, L26.)
 3. **ghcr.io pull 가능 여부 확인**: `ghcr.io/omnigent-ai/omnigent-server`가 private면
    `echo $GHCR_TOKEN | docker login ghcr.io -u <user> --password-stdin` (`read:packages`) 먼저.
 4. **배포**: `git push` (이미 완료) → `bash scripts/deploy-worker-vm.sh`
 5. **상태 확인**: `docker logs omnigent`로 부팅 로그 확인, `docker logs omnigent-host`로 서버 터널
    등록(runner registered) 로그 확인.
-6. **[git-worker] 에이전트 스펙 업로드**: `compose/omnigent/agents/git-worker/` 를 omnigent 서버에
+6. **[host] Codex 구독 로그인**: ChatGPT → Settings → Security 에서 device-code login 사전 활성화
+   (웹에서 1회) 후 `docker exec -it omnigent-host codex login --device-auth` — 화면에 뜨는 코드/URL
+   로 브라우저 인증. `omnigent-host-codex-auth` 볼륨에 영속되어 컨테이너 재기동 후 재로그인 불필요.
+7. **[git-worker] 에이전트 스펙 업로드**: `compose/omnigent/agents/git-worker/` 를 omnigent 서버에
    등록 (서버는 spec 을 업로드 받아 저장하는 방식 — `omnigent/server/README.md` "Accepts agent specs,
    stores them durably". 정확한 업로드 커맨드/API 는 omnigent CLI·admin UI 확인 필요, 미검증. local
    tool 파일(`tools/python/query_*_readonly.py`)이 omnigent-host 러너까지 어떻게 전달되는지도
@@ -308,7 +315,9 @@ repo 변경(compose/Caddyfile/env)은 main에 반영 완료. omnigent 는 worker
 - tailnet 기기에서 `http://agent.internal` 접속 → single-user 모드라 로그인 화면 없이 바로 진입하는지 확인
 - 대화 1건 생성 → `docker restart omnigent` → 재접속 시 대화·설정 유지 (Postgres + `/data` 영속)
 - 웹 UI에서 claude-native·codex·opencode 하니스 세션을 각각 실행 → 정상 동작 확인 (opencode 는 커스텀
-  이미지 반영 여부 재확인 포인트)
+  이미지 반영 여부 재확인 포인트, claude-native·codex 는 구독 인증으로 과금 안 되는지 — API 요금이
+  아니라 구독 세션으로 뜨는지 — 확인)
+- `docker restart omnigent-host` 후에도 Codex 로그인 유지되는지 (볼륨 영속 확인)
 - ollama-cloud provider(`compose/omnigent/host/config.yaml`)로 모델 응답 확인
 - worker-vm → ops-vm:5432 tailnet 도달성: `nc -z <OPS_TAILNET_IP> 5432`
 - **[git-worker]** git-worker 에이전트에 "repo X clone, 사소한 변경 후 브랜치 push, PR 생성" 지시 →
