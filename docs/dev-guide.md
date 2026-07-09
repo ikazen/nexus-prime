@@ -251,13 +251,16 @@ docker build --build-arg OMNIGENT_HOST_TAG=<tag> \
 docker push registry.internal:5000/omnigent-host:<tag>
 ```
 
-Ollama Cloud 등 provider 설정은 이미지가 아니라 `compose/omnigent/host/config.yaml`
-(`/root/.omnigent/config.yaml` 로 마운트)에서 관리한다 — 재빌드 불필요.
+OpenCode 의 Ollama Cloud provider 설정은 이미지가 아니라 아래 "OpenCode — Ollama Cloud"
+절에서 다룬다 — 재빌드 불필요.
 
 ### omnigent 하니스 구독 인증
 
 Claude/Codex 는 API 키가 아니라 **웹 구독**을 쓴다 (`docs/decisions.md` L26). 둘의
 메커니즘이 다르다 — vendor 문서(`deploy/modal/README.md` "Common setups") 기준.
+
+**Codex 는 사용자 요청으로 현재 보류 중** — 아래 절차는 참고용으로 남겨두고, 재개 시
+그대로 따르면 된다.
 
 **Claude — portable, 컨테이너 로그인 불필요:**
 
@@ -287,6 +290,32 @@ vendor 문서가 명시적으로 지원 안 함이라고 못박는다 — `~/.co
 3. 컨테이너 재기동 후에도 `/root/.codex` 볼륨이 살아있으니 재로그인 불필요 —
    `docker compose down`(볼륨 유지) 은 안전, `docker volume rm omnigent-host-codex-auth`
    하면 다시 로그인해야 함.
+
+### OpenCode — Ollama Cloud
+
+**omnigent 자체 provider 설정(`providers:` YAML)은 OpenCode 와 무관하다** — OpenCode 는
+자기 인증(`~/.local/share/opencode/auth.json`)과 자기 config 를 독립적으로 관리한다
+(vendor omnigent 문서: "Omnigent 는 OpenCode 크레덴셜을 저장하지 않음"). vendor OpenCode
+문서의 공식 "Ollama Cloud" 안내는 `/connect` 인터랙티브 TUI 를 전제로 하는데, 우리는
+헤드리스 컨테이너라 그 경로를 못 쓴다 — 대신 커스텀 provider 를 정적 JSON 으로 미리
+등록해 인터랙티브 스텝 자체를 없앤다 (`docs/decisions.md` L27).
+
+**구조**: `ollama` 사이드카(공식 `ollama/ollama` 이미지, `compose/omnigent/compose.yml`)가
+`OLLAMA_API_KEY` 로 `:cloud` 접미사 모델 요청을 ollama.com 에 프록시한다 — 로컬에 모델
+가중치를 받지 않아 디스크·VRAM 부담 없음. `compose/omnigent/host/opencode.json` 이
+OpenCode 의 전역 config(`/root/.config/opencode/opencode.json` 로 마운트)로, custom
+provider 하나를 이 사이드카(`http://ollama:11434/v1`)로 등록한다.
+
+**설정**:
+1. https://ollama.com/settings/keys 에서 API 키 발급 → `OLLAMA_API_KEY` 로
+   `worker-vm.enc.env` 에 저장(ollama 사이드카가 소비, omnigent-host 아님).
+2. `compose/omnigent/host/opencode.json` 의 `models` 맵에 실제 쓸 cloud 모델 ID 를
+   맞춘다(예시는 `gpt-oss:120b-cloud` — https://ollama.com/search?c=cloud 에서 확인).
+3. 배포 후 검증(1회, 선택): `docker exec -it omnigent-ollama ollama pull <model>:cloud`
+   로 사이드카가 그 모델을 인식하는지 확인 — cloud 모델은 실제로는 다운로드되지 않는다.
+
+인터랙티브 로그인이 없으므로(Codex 와 대조적으로) 배포 자동화에 별도 수동 개입이
+필요 없다.
 
 ## 신규 서비스 추가 체크리스트
 
