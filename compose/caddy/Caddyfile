@@ -55,10 +55,11 @@ http://pot-of-greed-ui.internal {
 
 # omnigent = worker-vm 배치, tailnet 전용 노출 (L23)
 http://agent.internal {
-    # .internal은 HTTP 전용 — HSTS 헤더가 실리면 브라우저가 https로 캐싱해 강제 치환한다
-    # (minio.internal 과 동일 문제. 이 라우팅이 배포되기 전, Caddy 의 automatic-HTTPS
-    # 캐치올에 이 호스트가 걸려있던 동안 HSTS 를 내려보낸 적이 있어 일부 브라우저가 캐싱함 —
-    # 캐싱된 브라우저는 chrome://net-internals/#hsts 에서 agent.internal 도메인 정책 삭제 필요)
+    # .internal은 HTTP 전용 — HSTS 헤더 방어적으로 제거(minio.internal 과 동일 패턴).
+    # 단, 이 라우팅이 배포되기 전 Caddy automatic-HTTPS 캐치올에 걸려있던 동안 방문한
+    # 브라우저는 별도로 ERR_SSL_PROTOCOL_ERROR 를 겪을 수 있음 — 이건 HSTS 가 아니라 Chrome
+    # 자체 HTTPS 리다이렉트 캐시 문제. 해결법은 docs/runbook.md "Adminer 접속" 참조
+    # (동일 증상이 adminer.internal 에서 먼저 발생함).
     reverse_proxy {$WORKER_TAILNET_IP}:8000 {
         header_down -Strict-Transport-Security
     }

@@ -154,12 +154,17 @@ ssh worker-vm sudo systemctl restart promtail
 - Password: `POSTGRES_PASSWORD`
 - Database: 비우면 전체 목록, 특정 DB 접속 시 DB명 입력
 
-**ERR_SSL_PROTOCOL_ERROR (Chrome 일반 모드에서만 발생):**
+## `.internal` 서비스에서 ERR_SSL_PROTOCOL_ERROR (Chrome 일반 모드에서만 발생)
 
-Chrome이 이전 HTTPS 리다이렉트를 캐시한 것. HSTS와 다른 캐시.
+특정 서비스 전용 문제가 아니다 — `http://<svc>.internal` 라우팅이 Caddyfile 에 없던 동안(또는
+없어졌다가 나중에 추가된 동안) 그 호스트를 방문한 적이 있으면, Caddy 의 automatic-HTTPS
+캐치올이 그 방문에 응답해 https 로 리다이렉트했을 수 있다. Chrome 이 그 리다이렉트를 캐시해서
+라우팅이 정상화된 뒤에도 계속 https 로 먼저 시도 → 인증서가 없는 `.internal` 이라 SSL 에러.
+HSTS 와는 다른 캐시(HSTS 라면 `chrome://net-internals/#hsts` 로 지워지지만 이 문제는 안 지워짐)
+— `adminer.internal` 에서 처음 발견, `agent.internal` 배포 때도 재발(2026-07-10).
 
 해결:
-1. F12 → Network 탭 → "Disable cache" 체크 → `http://adminer.internal` 접속
+1. F12 → Network 탭 → "Disable cache" 체크 → `http://<svc>.internal` 접속
 2. 이후 `chrome://settings/clearBrowserData` → "캐시된 이미지 및 파일" 삭제
 
 또는 DevTools Network 탭의 "Disable cache"를 켠 채로 사용해도 됨.
