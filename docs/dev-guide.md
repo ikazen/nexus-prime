@@ -24,7 +24,7 @@
 | Caddy edge | ops-vm | — | — | 443 | — | 모든 외부 라우팅 진입점 |
 | pot-of-greed API | ops-vm | `pot-of-greed-api:8000` | `http://pot-of-greed-api.internal` | — | JWT | 앱 워크로드 (본 repo `compose/pot-of-greed/`). Postgres+Neo4j+Ollama 의존 |
 | pot-of-greed UI | ops-vm | `pot-of-greed-ui:8000` | `http://pot-of-greed-ui.internal` | — | Chainlit auth | 공개 노출 시 Caddyfile `POT_OF_GREED_DOMAIN` 블록 주석 해제 |
-| omnigent | worker-vm | 없음 (nexus 밖) | `http://agent.internal` | — | accounts | meta-harness. 위치·노출 격리는 L23, Postgres 는 ops-vm 을 tailnet 직결 |
+| omnigent | worker-vm | 없음 (nexus 밖) | `http://agent.internal` | — | single-user (L25) | meta-harness control-plane. harness 는 실행 안 함 — 실제 실행은 `omnigent-host` 러너(같은 compose, 인바운드 없음). 위치·노출 격리는 L23, Postgres 는 ops-vm 을 tailnet 직결 |
 
 **dnsmasq / promtail 은 인프라 plumbing — 워크로드가 직접 호출하지 않음.**
 
@@ -170,7 +170,7 @@ docker exec -it postgres psql -U postgres -c "GRANT ALL ON SCHEMA public TO <use
 
 ### Postgres read-only role 발급
 
-다른 서비스 DB 를 읽기만 해야 하는 경우 (예: omnigent 의 cross-DB 조회) — 전용 DB/user 대신 대상 DB 에 read-only role 을 추가로 발급:
+다른 서비스 DB 를 읽기만 해야 하는 경우 (예: omnigent 의 cross-DB 조회 — 실사용: `omnigent_ro` 가 reflexion-rondo DB, pot-of-greed DB 에 각각 발급됨) — 전용 DB/user 대신 대상 DB 에 read-only role 을 추가로 발급:
 ```bash
 ssh ops-vm
 docker exec -it postgres psql -U postgres -c "CREATE USER <svc>_ro WITH PASSWORD '<pw>';"
@@ -189,6 +189,133 @@ docker exec -it postgres psql -U postgres -d <target_db> -c "ALTER DEFAULT PRIVI
 | 원격 상태 파악 | SSH | Prometheus/Loki 읽기 |
 | 인프라 변경(build/push/GC) | docker.sock | airflow DAG 트리거 (ops 큐 전용, L21) |
 | 타 서비스 DB 읽기 | superuser / 광범위 GRANT | 위 read-only role |
+
+## omnigent git-worker 셋업
+
+omnigent 를 "외주 직원"처럼 쓰는 에이전트(`compose/omnigent/agents/git-worker/`) —
+repo 를 clone·수정·push·PR 생성까지 하되, 로컬 파일·임의 네트워크는 격리한다.
+설계 근거: `docs/decisions.md` L24, L25.
+
+**중요**: 이 에이전트가 실제로 실행되는 곳은 `omnigent` 서버 컨테이너가 **아니라
+`omnigent-host` 러너 컨테이너**다 (L25 — 서버는 control-plane 전용, harness 를
+실행하지 않는다). 아래 `credential_proxy`/local tool 이 읽는 env 는 전부
+`omnigent-host` 의 env 여야 한다.
+
+### GitHub 인증 (fine-grained PAT)
+
+1. https://github.com/settings/personal-access-tokens/new 에서 발급:
+   - **Repository access**: 대상 repo 만 선택 (Resource owner 는 본인 계정)
+   - **Permissions**: Contents = Read and write, Pull requests = Read and write,
+     Metadata = Read-only (자동). 그 외 전부 No access
+   - **Expiration**: 짧게 설정 + 주기적 로테이션
+2. 값을 `OMNIGENT_GH_TOKEN` 으로 `worker-vm.enc.env` 에 저장 (SOPS 재암호화) —
+   `compose/omnigent/compose.yml` 의 `omnigent-host` 서비스가 소비한다.
+
+에이전트 안에서 이 토큰은 원문으로 노출되지 않는다 — `os_env.sandbox.credential_proxy`
+(`gh_basic` preset)가 parent 프로세스(`omnigent-host` 컨테이너)에서만 실제 값을 읽고,
+샌드박스 안 `git`/`gh` 에는 합성 placeholder 만 보인다. egress 프록시가
+`github.com`/`api.github.com` 으로 나가는 요청에만 실제 토큰을 붙인다 —
+샌드박스가 RCE 로 뚫려도 PAT 자체는 유출되지 않는다. `credential_proxy` 는
+`os_env.sandbox.egress_rules` 가 non-empty 여야 동작하고 `sandbox.type` 이
+`linux_bwrap`/`darwin_seatbelt` 여야 한다 (macOS 의 `gh_basic` 은 Go 바이너리
+TLS 검증 방식 때문에 미지원 — worker-vm 은 Linux 라 해당 없음).
+
+### DB read-only 조회
+
+`egress_rules` 를 켜면(위) 샌드박스의 유일한 아웃바운드 경로가 HTTP(S) MITM
+프록시가 되므로, Postgres 같은 raw TCP 는 샌드박스 안에서 직접 나갈 수 없다.
+그래서 DB 조회는 `os_env` 밖의 local tool 로 둔다 — omnigent 의 local tool 은
+(별도 `container_image` 지정이 없으면) parent 프로세스(`omnigent-host` 컨테이너)에서
+실행되므로 `OMNIGENT_RONDO_RO_URL`/`OMNIGENT_POG_RO_URL`(`omnigent_ro` role DSN, 위
+절차로 발급)을 직접 읽어도 안전하다 — 에이전트는 tool 이 반환하는 결과 행만 본다.
+구현: `compose/omnigent/agents/git-worker/tools/python/query_rondo_readonly.py`,
+`query_pog_readonly.py` (각각 `@tool` 데코레이터, 파일명 = tool 이름 —
+`omnigent/spec/parser.py::_discover_local_tools`).
+
+### omnigent host 이미지 빌드
+
+`omnigent-host` 는 vendor 이미지(`ghcr.io/omnigent-ai/omnigent-host`)에 opencode 만
+얹은 얇은 커스텀 이미지 — claude-code/codex/pi/kiro-cli 는 vendor 이미지에 이미
+baked-in, opencode 만 없어서 추가한다 (`compose/omnigent/host/Dockerfile`).
+
+worker-vm 은 ARM64(OCI A1.Flex) — vendor 이미지는 `docker manifest inspect
+ghcr.io/omnigent-ai/omnigent-host:latest` 로 linux/arm64 지원 확인됨. `opencode-ai`
+npm 패키지의 네이티브 의존성이 arm64 에서 빌드되는지는 미확인이라, QEMU 에뮬레이션보다
+**worker-vm 네이티브 빌드**로 바로 검증하는 게 안전:
+
+```bash
+ssh worker-vm
+cd ~/nexus-prime
+docker build --build-arg OMNIGENT_HOST_TAG=<tag> \
+  -t registry.internal:5000/omnigent-host:<tag> compose/omnigent/host
+docker push registry.internal:5000/omnigent-host:<tag>
+```
+
+OpenCode 의 Ollama Cloud provider 설정은 이미지가 아니라 아래 "OpenCode — Ollama Cloud"
+절에서 다룬다 — 재빌드 불필요.
+
+### omnigent 하니스 구독 인증
+
+Claude/Codex 는 API 키가 아니라 **웹 구독**을 쓴다 (`docs/decisions.md` L26). 둘의
+메커니즘이 다르다 — vendor 문서(`deploy/modal/README.md` "Common setups") 기준.
+
+**Codex 는 사용자 요청으로 현재 보류 중** — 아래 절차는 참고용으로 남겨두고, 재개 시
+그대로 따르면 된다.
+
+**Claude — portable, 컨테이너 로그인 불필요:**
+
+```bash
+# 로컬 머신(Claude Code CLI 로그인 되어 있는 곳)에서 1회
+claude setup-token
+```
+
+출력된 토큰을 `CLAUDE_CODE_OAUTH_TOKEN` 으로 `worker-vm.enc.env` 에 저장. `ANTHROPIC_API_KEY`
+/ `OMNIGENT_ANTHROPIC_API_KEY` 와 동시에 설정하지 말 것 — raw API 키가 우선 인식되어
+구독 대신 종량 과금으로 갈 수 있다.
+
+**Codex — 개인 ChatGPT Plus/Pro 는 헤드리스 토큰이 없음:**
+
+vendor 문서가 명시적으로 지원 안 함이라고 못박는다 — `~/.codex/auth.json` 이 사실상
+1회용 refresh token이라 파일을 복사하거나 시크릿으로 주입하면 서로 무효화된다
+(`CODEX_ACCESS_TOKEN` 은 ChatGPT Business/Enterprise 워크스페이스 전용, 관리자 콘솔에서
+발급 — 개인 플랜엔 해당 없음). 대신 **컨테이너 안에서 직접 로그인**하고 그 결과를
+볼륨(`omnigent-host-codex-auth:/root/.codex`)으로 영속시킨다:
+
+1. ChatGPT → Settings → Security 에서 device-code login 활성화 (사전 1회, 웹에서 직접)
+2. omnigent-host 배포 후:
+   ```bash
+   docker exec -it omnigent-host codex login --device-auth
+   ```
+   화면에 뜨는 코드/URL 로 브라우저에서 인증 완료.
+3. 컨테이너 재기동 후에도 `/root/.codex` 볼륨이 살아있으니 재로그인 불필요 —
+   `docker compose down`(볼륨 유지) 은 안전, `docker volume rm omnigent-host-codex-auth`
+   하면 다시 로그인해야 함.
+
+### OpenCode — Ollama Cloud
+
+**omnigent 자체 provider 설정(`providers:` YAML)은 OpenCode 와 무관하다** — OpenCode 는
+자기 인증(`~/.local/share/opencode/auth.json`)과 자기 config 를 독립적으로 관리한다
+(vendor omnigent 문서: "Omnigent 는 OpenCode 크레덴셜을 저장하지 않음"). vendor OpenCode
+문서의 공식 "Ollama Cloud" 안내는 `/connect` 인터랙티브 TUI 를 전제로 하는데, 우리는
+헤드리스 컨테이너라 그 경로를 못 쓴다 — 대신 커스텀 provider 를 정적 JSON 으로 미리
+등록해 인터랙티브 스텝 자체를 없앤다 (`docs/decisions.md` L27).
+
+**구조**: `ollama` 사이드카(공식 `ollama/ollama` 이미지, `compose/omnigent/compose.yml`)가
+`OLLAMA_API_KEY` 로 `:cloud` 접미사 모델 요청을 ollama.com 에 프록시한다 — 로컬에 모델
+가중치를 받지 않아 디스크·VRAM 부담 없음. `compose/omnigent/host/opencode.json` 이
+OpenCode 의 전역 config(`/root/.config/opencode/opencode.json` 로 마운트)로, custom
+provider 하나를 이 사이드카(`http://ollama:11434/v1`)로 등록한다.
+
+**설정**:
+1. https://ollama.com/settings/keys 에서 API 키 발급 → `OLLAMA_API_KEY` 로
+   `worker-vm.enc.env` 에 저장(ollama 사이드카가 소비, omnigent-host 아님).
+2. `compose/omnigent/host/opencode.json` 의 `models` 맵에 실제 쓸 cloud 모델 ID 를
+   맞춘다(예시는 `gpt-oss:120b-cloud` — https://ollama.com/search?c=cloud 에서 확인).
+3. 배포 후 검증(1회, 선택): `docker exec -it omnigent-ollama ollama pull <model>:cloud`
+   로 사이드카가 그 모델을 인식하는지 확인 — cloud 모델은 실제로는 다운로드되지 않는다.
+
+인터랙티브 로그인이 없으므로(Codex 와 대조적으로) 배포 자동화에 별도 수동 개입이
+필요 없다.
 
 ## 신규 서비스 추가 체크리스트
 
