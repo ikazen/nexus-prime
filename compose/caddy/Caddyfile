@@ -55,7 +55,13 @@ http://pot-of-greed-ui.internal {
 
 # omnigent = worker-vm 배치, tailnet 전용 노출 (L23)
 http://agent.internal {
-    reverse_proxy {$WORKER_TAILNET_IP}:8000
+    # .internal은 HTTP 전용 — HSTS 헤더가 실리면 브라우저가 https로 캐싱해 강제 치환한다
+    # (minio.internal 과 동일 문제. 이 라우팅이 배포되기 전, Caddy 의 automatic-HTTPS
+    # 캐치올에 이 호스트가 걸려있던 동안 HSTS 를 내려보낸 적이 있어 일부 브라우저가 캐싱함 —
+    # 캐싱된 브라우저는 chrome://net-internals/#hsts 에서 agent.internal 도메인 정책 삭제 필요)
+    reverse_proxy {$WORKER_TAILNET_IP}:8000 {
+        header_down -Strict-Transport-Security
+    }
 }
 
 {$AIRFLOW_DOMAIN} {
