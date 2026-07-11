@@ -10,6 +10,7 @@
 - **다른 repo 에서 인프라 자원 사용 / 신규 서비스 개발·배포**: `docs/dev-guide.md` (서비스 인벤토리 + 자원 메뉴)
 - 토폴로지: `docs/architecture.md`
 - 결정 이력: `docs/decisions.md`
+- omnigent 구조·격리 모델: `docs/omnigent.md`
 
 ## 리포지토리 구조
 

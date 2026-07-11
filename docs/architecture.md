@@ -46,7 +46,7 @@
 - **pot-of-greed** (api + ui) — `compose/pot-of-greed/`, `ops-vm.yml` include 로 본 repo 가 직접 배포. Postgres + Neo4j + Ollama(mac-server) 의존. 내부 노출만 (`pot-of-greed-{api,ui}.internal`)
 - **reflexion-rondo** (rondo-daemon + dashboard) — 자체 repo 에서 배포, nexus network·Caddy 만 공유 (`rondo-{api,dashboard}.internal`)
 
-worker-vm 은 별도로 **omnigent**(meta-harness, Claude Code + OpenCode 오케스트레이션)를 호스팅한다 — `compose/omnigent/`, `worker-vm.yml` include. Postgres 는 ops-vm 을 tailnet 으로 직결, 노출은 `agent.internal`(tailnet 전용) 뿐. 인증은 built-in accounts 모드. 위치·노출 격리 배경은 L23.
+worker-vm 은 별도로 **omnigent**(meta-harness, Claude Code + OpenCode 오케스트레이션)를 호스팅한다 — `compose/omnigent/`, `worker-vm.yml` include. 구조·2-컨테이너 구성·격리 모델은 `docs/omnigent.md`, 위치·노출 격리 배경은 L23.
 
 ## 네트워크
 
