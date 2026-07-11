@@ -5,11 +5,12 @@
       "npm": "@ai-sdk/openai-compatible",
       "name": "Ollama Cloud",
       "options": {
-        "baseURL": "http://ollama:11434/v1"
+        "baseURL": "https://ollama.com/v1",
+        "apiKey": "{file:/root/.secrets/ollama_api_key}"
       },
       "models": {
-        "gpt-oss:120b-cloud": {
-          "name": "GPT-OSS 120B (Ollama Cloud)"
+        "glm-5.2:cloud": {
+          "name": "GLM-5.2 (Ollama Cloud)"
         }
       }
     }

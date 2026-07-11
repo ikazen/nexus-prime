@@ -47,7 +47,17 @@ services:
   omnigent-host:
     image: registry.internal:5000/omnigent-host:${OMNIGENT_HOST_TAG:-latest}
     container_name: omnigent-host
-    command: ["omnigent", "host", "--server", "http://omnigent:8000"]
+    # OpenCode 의 opencode.json 이 Ollama Cloud apiKey 를 {file:/root/.secrets/ollama_api_key}
+    # 로 참조한다 — OpenCode 의 {env:VAR} 치환이 custom provider apiKey 필드에서 알려진
+    # 버그로 동작하지 않아(vendor GitHub issue), env 를 파일로 물질화하는 wrapper 필요 (L28).
+    command:
+      - sh
+      - -c
+      - |
+        mkdir -p /root/.secrets
+        printf '%s' "$$OLLAMA_API_KEY" > /root/.secrets/ollama_api_key
+        chmod 600 /root/.secrets/ollama_api_key
+        exec omnigent host --server http://omnigent:8000
     depends_on:
       omnigent:
         condition: service_healthy
@@ -65,6 +75,10 @@ services:
       #     영속시킨다 (ChatGPT → Settings → Security 에서 device-code login 선행 활성화
       #     필요). CODEX_ACCESS_TOKEN 은 Business/Enterprise 워크스페이스 전용이라 해당 없음.
       CLAUDE_CODE_OAUTH_TOKEN: ${CLAUDE_CODE_OAUTH_TOKEN}
+      # OpenCode 의 Ollama Cloud provider 인증 (L28) — 위 wrapper 커맨드가 이 값을
+      # /root/.secrets/ollama_api_key 파일로 물질화, opencode.json 이 {file:...} 로 참조.
+      # 사이드카 없이 https://ollama.com/v1 에 직접 Bearer 인증.
+      OLLAMA_API_KEY: ${OLLAMA_API_KEY}
       # git-worker 에이전트(agents/git-worker/) 전용. 실제 값은 이 컨테이너(하니스가
       # 도는 러너의 parent 프로세스)에만 존재 — 샌드박스 안 에이전트로는 전달되지 않는다.
       #   - OMNIGENT_GH_TOKEN: fine-grained PAT. os_env.sandbox.credential_proxy
@@ -79,33 +93,22 @@ services:
       OMNIGENT_RONDO_RO_URL: ${OMNIGENT_RONDO_RO_URL}
       OMNIGENT_POG_RO_URL: ${OMNIGENT_POG_RO_URL}
     volumes:
-      # OpenCode 자체 provider 설정(Ollama Cloud 사이드카 연결, L27). OpenCode 는 omnigent 의
-      # provider 설정을 읽지 않고 자기 전역 config(~/.config/opencode/opencode.json, host 는
-      # root 실행)를 따로 관리한다.
+      # OpenCode 자체 provider 설정(Ollama Cloud, L28). OpenCode 는 omnigent 의 provider
+      # 설정을 읽지 않고 자기 전역 config(~/.config/opencode/opencode.json, host 는 root
+      # 실행)를 따로 관리한다. https://ollama.com/v1 에 direct API 로 붙는다 — 사이드카 없음
+      # (L27 초안은 로컬 ollama 사이드카로 프록시했으나, headless direct API 가 공식 지원되고
+      # 더 단순해 L28 에서 제거).
       - ./host/opencode.json:/root/.config/opencode/opencode.json:ro
       - omnigent-host-workspace:/data/workspace
       # Codex 개인 플랜 로그인 영속 — 위 주석 참조. `codex login` 이 여기 쓴다.
       - omnigent-host-codex-auth:/root/.codex
+      # {file:...} 로 참조하는 Ollama Cloud API 키 파일(위 command wrapper 가 씀) 영속.
+      - omnigent-host-secrets:/root/.secrets
     restart: unless-stopped
     mem_limit: 4g
-
-  # OpenCode 의 Ollama Cloud provider 가 가리키는 사이드카 (L27). omnigent-host 의 OpenCode 는
-  # 자기 provider 설정을 따로 관리하고 omnigent 의 provider config.yaml 을 읽지 않으므로,
-  # Ollama Cloud 연동은 omnigent 레이어가 아니라 이 sidecar + OpenCode 자체 config 로 한다.
-  # 공식 ollama/ollama 이미지가 OLLAMA_API_KEY 로 :cloud 접미사 모델 요청을 ollama.com 으로
-  # 프록시한다 — 로컬에 모델 가중치를 받지 않는다(디스크·VRAM 불필요).
-  ollama:
-    image: ollama/ollama:latest
-    container_name: omnigent-ollama
-    environment:
-      OLLAMA_API_KEY: ${OLLAMA_API_KEY}
-    volumes:
-      - omnigent-ollama-data:/root/.ollama
-    restart: unless-stopped
-    mem_limit: 1g
 
 volumes:
   omnigent-data:
   omnigent-host-workspace:
   omnigent-host-codex-auth:
-  omnigent-ollama-data:
+  omnigent-host-secrets:

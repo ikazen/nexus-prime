@@ -293,8 +293,9 @@ repo 변경(compose/Caddyfile/env)은 main에 반영 완료. omnigent 는 worker
     로컬에서 `claude setup-token` 1회 실행, 출력 토큰을 `CLAUDE_CODE_OAUTH_TOKEN` 으로 보관.
     (Codex 는 사용자 요청으로 지금은 보류 — 6번 단계 생략 가능.)
 1e. **[host] Ollama Cloud API 키 발급** — `docs/dev-guide.md` "OpenCode — Ollama Cloud" 참조:
-    https://ollama.com/settings/keys 에서 발급, `OLLAMA_API_KEY` 로 보관(ollama 사이드카가
-    소비). `compose/omnigent/host/opencode.json` 의 `models` 맵을 실제 쓸 모델로 맞춘다.
+    https://ollama.com/settings/keys 에서 발급, `OLLAMA_API_KEY` 로 보관. 사이드카 없이
+    `omnigent-host` 가 direct API 로 소비(L28) — command wrapper 가 `/root/.secrets/ollama_api_key`
+    파일로 물질화. `compose/omnigent/host/opencode.json` 의 `models` 맵을 실제 쓸 모델로 맞춘다.
 2. **`worker-vm.enc.env` 작성** (`compose/_hosts/worker-vm.env.example` 복사 후 SOPS 암호화):
    `OMNIGENT_PG_PASSWORD`(위 1의 pw), `OPS_TAILNET_IP`, `WORKER_TAILNET_IP`,
    `OMNIGENT_HOST_TAG`(위 1c 태그),
@@ -307,7 +308,8 @@ repo 변경(compose/Caddyfile/env)은 main에 반영 완료. omnigent 는 worker
    `echo $GHCR_TOKEN | docker login ghcr.io -u <user> --password-stdin` (`read:packages`) 먼저.
 4. **배포**: `git push` (이미 완료) → `bash scripts/deploy-worker-vm.sh`
 5. **상태 확인**: `docker logs omnigent`로 부팅 로그 확인, `docker logs omnigent-host`로 서버 터널
-   등록(runner registered) 로그 확인, `docker logs omnigent-ollama`로 정상 기동 확인.
+   등록(runner registered) 로그 확인, `docker exec omnigent-host cat /root/.secrets/ollama_api_key
+   | wc -c` 로 Ollama Cloud 키 파일 물질화 확인(값 자체는 출력하지 말 것).
 6. **[host, 보류] Codex 구독 로그인** — 지금은 진행 안 함. 재개 시: ChatGPT → Settings → Security
    에서 device-code login 사전 활성화(웹에서 1회) 후 `docker exec -it omnigent-host codex login
    --device-auth` — 화면에 뜨는 코드/URL 로 브라우저 인증. `omnigent-host-codex-auth` 볼륨에
@@ -320,12 +322,12 @@ repo 변경(compose/Caddyfile/env)은 main에 반영 완료. omnigent 는 worker
 
 **E2E 검증:**
 - `docker compose -f compose/_hosts/worker-vm.yml --env-file compose/_hosts/worker-vm.env ps` — `omnigent`,
-  `omnigent-host`, `omnigent-ollama` 모두 healthy/running
+  `omnigent-host` 둘 다 healthy/running (사이드카 없음, L28)
 - tailnet 기기에서 `http://agent.internal` 접속 → single-user 모드라 로그인 화면 없이 바로 진입하는지 확인
 - 대화 1건 생성 → `docker restart omnigent` → 재접속 시 대화·설정 유지 (Postgres + `/data` 영속)
 - 웹 UI에서 claude-native 세션 실행 → 구독 인증으로 뜨는지(API 과금 아님) 확인
-- 웹 UI에서 opencode 세션 실행 → `/models` 에 ollama-cloud 모델(`opencode.json` 에 등록한
-  이름)이 보이는지, 실제 응답이 오는지 확인 — 커스텀 이미지(opencode 설치) 반영 여부도 겸해 확인
+- 웹 UI에서 opencode 세션 실행 → `/models` 에 `glm-5.2:cloud`(`opencode.json` 에 등록한 이름)가
+  보이는지, 실제 응답이 오는지 확인 — 커스텀 이미지(opencode 설치) 반영 여부도 겸해 확인
 - worker-vm → ops-vm:5432 tailnet 도달성: `nc -z <OPS_TAILNET_IP> 5432`
 - **[보류]** codex 세션, `docker restart omnigent-host` 후 Codex 로그인 유지 — Codex 재개 시 검증
 - **[git-worker]** git-worker 에이전트에 "repo X clone, 사소한 변경 후 브랜치 push, PR 생성" 지시 →

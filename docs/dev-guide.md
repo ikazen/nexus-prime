@@ -300,19 +300,28 @@ vendor 문서가 명시적으로 지원 안 함이라고 못박는다 — `~/.co
 헤드리스 컨테이너라 그 경로를 못 쓴다 — 대신 커스텀 provider 를 정적 JSON 으로 미리
 등록해 인터랙티브 스텝 자체를 없앤다 (`docs/decisions.md` L27).
 
-**구조**: `ollama` 사이드카(공식 `ollama/ollama` 이미지, `compose/omnigent/compose.yml`)가
-`OLLAMA_API_KEY` 로 `:cloud` 접미사 모델 요청을 ollama.com 에 프록시한다 — 로컬에 모델
-가중치를 받지 않아 디스크·VRAM 부담 없음. `compose/omnigent/host/opencode.json` 이
-OpenCode 의 전역 config(`/root/.config/opencode/opencode.json` 로 마운트)로, custom
-provider 하나를 이 사이드카(`http://ollama:11434/v1`)로 등록한다.
+**구조 (L28, 사이드카 없음)**: Ollama Cloud 가 공식 지원하는 headless direct API 경로 —
+`https://ollama.com/v1` 에 `OLLAMA_API_KEY` 를 Bearer 로 직접 붙인다. 로컬 ollama 데몬을
+프록시로 세울 필요 없음(초안 L27 은 사이드카를 세웠으나 불필요하다는 게 드러나 제거).
+`compose/omnigent/host/opencode.json` 이 OpenCode 의 전역 config
+(`/root/.config/opencode/opencode.json` 로 마운트)로, custom provider 하나를 이 주소로
+등록한다.
+
+**`{env:VAR}` 치환 버그 — `{file:...}` 우회 필요**: OpenCode 의 config 는 `{env:VAR}` 로
+환경변수를 참조하는 문법을 지원하지만, custom provider 의 `apiKey` 필드에서는 알려진
+버그로 동작하지 않는다(vendor GitHub issue). 공식 문서화된 우회법은 `{file:<path>}` —
+파일 경로를 참조. 그래서 `compose/omnigent/compose.yml` 의 `omnigent-host` `command:` 를
+wrapper 셸 스크립트로 바꿔 `OLLAMA_API_KEY` env 를 `/root/.secrets/ollama_api_key` 파일로
+물질화한 뒤 원래 `omnigent host --server ...` 를 `exec` 한다.
 
 **설정**:
 1. https://ollama.com/settings/keys 에서 API 키 발급 → `OLLAMA_API_KEY` 로
-   `worker-vm.enc.env` 에 저장(ollama 사이드카가 소비, omnigent-host 아님).
+   `worker-vm.enc.env` 에 저장(`omnigent-host` 컨테이너가 소비, wrapper 가 파일로 옮김).
 2. `compose/omnigent/host/opencode.json` 의 `models` 맵에 실제 쓸 cloud 모델 ID 를
-   맞춘다(예시는 `gpt-oss:120b-cloud` — https://ollama.com/search?c=cloud 에서 확인).
-3. 배포 후 검증(1회, 선택): `docker exec -it omnigent-ollama ollama pull <model>:cloud`
-   로 사이드카가 그 모델을 인식하는지 확인 — cloud 모델은 실제로는 다운로드되지 않는다.
+   맞춘다(현재 `glm-5.2:cloud` — https://ollama.com/search?c=cloud 에서 카탈로그 확인).
+3. 배포 후 검증: `docker exec omnigent-host cat /root/.secrets/ollama_api_key | wc -c`
+   로 파일이 정상 생성됐는지(값 자체는 출력하지 말 것). cloud 모델은 로컬 다운로드가
+   없으므로 별도 pull 불필요.
 
 인터랙티브 로그인이 없으므로(Codex 와 대조적으로) 배포 자동화에 별도 수동 개입이
 필요 없다.
