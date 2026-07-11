@@ -256,13 +256,17 @@ colima stop && colima start --cpu 6 --memory 8
 
 백업 대상: `terraform.tfstate` 와 `terraform.tfstate.backup` 둘 다. `.backup` 은 직전 apply 상태를 보존하므로 롤백 시 유용.
 
+## OCI API key 로테이션
+
+장기 살아있는 key — 분기 1 회 `secrets-backup.md` 절차대로 재발급 권장 (dev 머신 침해 시 OCI 전 권한 노출 방지).
+
 ## 인스턴스 / 메타 손실 시 재배포
 
 장애 복구 = "인스턴스 재설치" 와 동일 절차 (L18). 위 섹션 참조.
 
 ## omnigent 최초 배포 체크리스트
 
-repo 변경(compose/Caddyfile/env)은 main에 반영 완료. omnigent 는 worker-vm 배치, tailnet 전용 노출(L23) — 아래는 실제 기동까지 남은 외부 단계, 순서대로.
+omnigent 는 worker-vm 배치, tailnet 전용 노출(L23). repo 변경 완료 후 실제 기동까지 필요한 외부 단계 — 신규 배포·L18 인스턴스 재설치 후 재배포 모두 아래 순서.
 
 1. **Postgres DB/user 발급** (ops-vm, "Postgres DB 발급" 절차, `docs/dev-guide.md` 참조):
    ```bash
@@ -306,14 +310,12 @@ repo 변경(compose/Caddyfile/env)은 main에 반영 완료. omnigent 는 worker
    (accounts 관련 키는 더 이상 없음 — single-user 모드, L25. Codex API 키도 없음 — 구독 인증, L26.)
 3. **ghcr.io pull 가능 여부 확인**: `ghcr.io/omnigent-ai/omnigent-server`가 private면
    `echo $GHCR_TOKEN | docker login ghcr.io -u <user> --password-stdin` (`read:packages`) 먼저.
-4. **배포**: `git push` (이미 완료) → `bash scripts/deploy-worker-vm.sh`
-   **파일 바인드마운트(`opencode.json` 등) 만 바뀐 경우 주의**: `deploy-worker-vm.sh`(또는
-   수동 `docker compose up -d`)는 compose.yml 서비스 정의 자체가 안 바뀌면 컨테이너를
-   재생성하지 않는다 — `git pull` 이 호스트의 파일을 새 inode 로 교체해도, 이미 뜬
-   컨테이너는 기존 inode 를 계속 바라봐서 옛날 내용을 읽는다(단일 파일 바인드마운트의
-   흔한 함정, 디렉토리 마운트는 해당 없음). `opencode.json` 만 고쳤다면
-   `docker compose ... up -d --force-recreate omnigent-host` 로 명시적으로 재생성해야
-   반영된다(2026-07-11 확인).
+4. **배포**: `git push` → `bash scripts/deploy-worker-vm.sh`
+   **파일 바인드마운트(`opencode.json` 등) 만 바뀐 경우 주의**: compose.yml 서비스 정의
+   자체가 안 바뀌면 컨테이너를 재생성하지 않는다 — 이미 뜬 컨테이너는 기존 inode 를
+   계속 바라봐서 옛날 내용을 읽는다(단일 파일 바인드마운트의 흔한 함정, 디렉토리
+   마운트는 해당 없음). `opencode.json` 만 고쳤다면
+   `docker compose ... up -d --force-recreate omnigent-host` 로 명시적으로 재생성해야 반영된다.
 5. **상태 확인**: `docker logs omnigent`로 부팅 로그 확인, `docker logs omnigent-host`로 서버 터널
    등록(runner registered) 로그 확인, `docker exec omnigent-host cat /root/.secrets/ollama_api_key
    | wc -c` 로 Ollama Cloud 키 파일 물질화 확인(값 자체는 출력하지 말 것).

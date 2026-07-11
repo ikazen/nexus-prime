@@ -212,36 +212,29 @@ repo 를 clone·수정·push·PR 생성까지 하되, 로컬 파일·임의 네�
    `compose/omnigent/compose.yml` 의 `omnigent-host` 서비스가 소비한다.
 
 에이전트 안에서 이 토큰은 원문으로 노출되지 않는다 — `os_env.sandbox.credential_proxy`
-(`gh_basic` preset)가 parent 프로세스(`omnigent-host` 컨테이너)에서만 실제 값을 읽고,
-샌드박스 안 `git`/`gh` 에는 합성 placeholder 만 보인다. egress 프록시가
-`github.com`/`api.github.com` 으로 나가는 요청에만 실제 토큰을 붙인다 —
-샌드박스가 RCE 로 뚫려도 PAT 자체는 유출되지 않는다. `credential_proxy` 는
-`os_env.sandbox.egress_rules` 가 non-empty 여야 동작하고 `sandbox.type` 이
-`linux_bwrap`/`darwin_seatbelt` 여야 한다 (macOS 의 `gh_basic` 은 Go 바이너리
-TLS 검증 방식 때문에 미지원 — worker-vm 은 Linux 라 해당 없음).
+(`gh_basic` preset)가 parent 프로세스에서만 실제 값을 읽고, 샌드박스 안 `git`/`gh` 에는
+합성 placeholder 만 보인다(github.com 아웃바운드에만 실제 토큰 첨부). `credential_proxy`
+는 `sandbox.egress_rules` 가 non-empty, `sandbox.type` 이 `linux_bwrap`/`darwin_seatbelt`
+여야 동작 — macOS 의 `gh_basic` 은 미지원이지만 worker-vm 은 Linux 라 해당 없음.
 
 ### DB read-only 조회
 
-`egress_rules` 를 켜면(위) 샌드박스의 유일한 아웃바운드 경로가 HTTP(S) MITM
-프록시가 되므로, Postgres 같은 raw TCP 는 샌드박스 안에서 직접 나갈 수 없다.
-그래서 DB 조회는 `os_env` 밖의 local tool 로 둔다 — omnigent 의 local tool 은
-(별도 `container_image` 지정이 없으면) parent 프로세스(`omnigent-host` 컨테이너)에서
-실행되므로 `OMNIGENT_RONDO_RO_URL`/`OMNIGENT_POG_RO_URL`(`omnigent_ro` role DSN, 위
-절차로 발급)을 직접 읽어도 안전하다 — 에이전트는 tool 이 반환하는 결과 행만 본다.
-구현: `compose/omnigent/agents/git-worker/tools/python/query_rondo_readonly.py`,
-`query_pog_readonly.py` (각각 `@tool` 데코레이터, 파일명 = tool 이름 —
-`omnigent/spec/parser.py::_discover_local_tools`).
+`egress_rules` 를 켜면 샌드박스의 유일한 아웃바운드가 HTTP(S) MITM 프록시가 되어 Postgres
+raw TCP 는 나갈 수 없다. 그래서 DB 조회는 `os_env` 밖의 local tool 로 둔다 — local tool 은
+(별도 `container_image` 지정이 없으면) parent 프로세스에서 실행되므로
+`OMNIGENT_RONDO_RO_URL`/`OMNIGENT_POG_RO_URL`(`omnigent_ro` role DSN)을 직접 읽어도
+안전하다 — 에이전트는 tool 결과 행만 본다. 구현:
+`compose/omnigent/agents/git-worker/tools/python/query_{rondo,pog}_readonly.py`
+(`@tool` 데코레이터, 파일명 = tool 이름).
 
 ### omnigent host 이미지 빌드
 
-`omnigent-host` 는 vendor 이미지(`ghcr.io/omnigent-ai/omnigent-host`)에 opencode 만
-얹은 얇은 커스텀 이미지 — claude-code/codex/pi/kiro-cli 는 vendor 이미지에 이미
-baked-in, opencode 만 없어서 추가한다 (`compose/omnigent/host/Dockerfile`).
+`omnigent-host` 는 vendor 이미지에 opencode 만 얹은 커스텀 이미지
+(`compose/omnigent/host/Dockerfile`, 근거: L25).
 
-worker-vm 은 ARM64(OCI A1.Flex) — vendor 이미지는 `docker manifest inspect
-ghcr.io/omnigent-ai/omnigent-host:latest` 로 linux/arm64 지원 확인됨. `opencode-ai`
-npm 패키지의 네이티브 의존성이 arm64 에서 빌드되는지는 미확인이라, QEMU 에뮬레이션보다
-**worker-vm 네이티브 빌드**로 바로 검증하는 게 안전:
+worker-vm 은 ARM64(OCI A1.Flex) — vendor 이미지는 linux/arm64 매니페스트 지원.
+`opencode-ai` npm 패키지의 arm64 네이티브 의존성 빌드는 QEMU 에뮬레이션보다
+**worker-vm 네이티브 빌드**로 검증하는 게 안전:
 
 ```bash
 ssh worker-vm
@@ -256,8 +249,7 @@ OpenCode 의 Ollama Cloud provider 설정은 이미지가 아니라 아래 "Open
 
 ### omnigent 하니스 구독 인증
 
-Claude/Codex 는 API 키가 아니라 **웹 구독**을 쓴다 (`docs/decisions.md` L26). 둘의
-메커니즘이 다르다 — vendor 문서(`deploy/modal/README.md` "Common setups") 기준.
+Claude/Codex 는 API 키가 아니라 **웹 구독**을 쓴다 — 근거·트레이드오프는 `docs/decisions.md` L26.
 
 **Codex 는 사용자 요청으로 현재 보류 중** — 아래 절차는 참고용으로 남겨두고, 재개 시
 그대로 따르면 된다.
@@ -273,13 +265,10 @@ claude setup-token
 / `OMNIGENT_ANTHROPIC_API_KEY` 와 동시에 설정하지 말 것 — raw API 키가 우선 인식되어
 구독 대신 종량 과금으로 갈 수 있다.
 
-**Codex — 개인 ChatGPT Plus/Pro 는 헤드리스 토큰이 없음:**
-
-vendor 문서가 명시적으로 지원 안 함이라고 못박는다 — `~/.codex/auth.json` 이 사실상
-1회용 refresh token이라 파일을 복사하거나 시크릿으로 주입하면 서로 무효화된다
-(`CODEX_ACCESS_TOKEN` 은 ChatGPT Business/Enterprise 워크스페이스 전용, 관리자 콘솔에서
-발급 — 개인 플랜엔 해당 없음). 대신 **컨테이너 안에서 직접 로그인**하고 그 결과를
-볼륨(`omnigent-host-codex-auth:/root/.codex`)으로 영속시킨다:
+**Codex — 개인 ChatGPT Plus/Pro 는 헤드리스 토큰이 없음** (`~/.codex/auth.json` 이 1회용
+refresh token 이라 시크릿 주입 불가, `CODEX_ACCESS_TOKEN` 은 Business/Enterprise 전용).
+대신 **컨테이너 안에서 직접 로그인**하고 결과를 볼륨(`omnigent-host-codex-auth:/root/.codex`)
+으로 영속시킨다:
 
 1. ChatGPT → Settings → Security 에서 device-code login 활성화 (사전 1회, 웹에서 직접)
 2. omnigent-host 배포 후:
@@ -293,26 +282,10 @@ vendor 문서가 명시적으로 지원 안 함이라고 못박는다 — `~/.co
 
 ### OpenCode — Ollama Cloud
 
-**omnigent 자체 provider 설정(`providers:` YAML)은 OpenCode 와 무관하다** — OpenCode 는
-자기 인증(`~/.local/share/opencode/auth.json`)과 자기 config 를 독립적으로 관리한다
-(vendor omnigent 문서: "Omnigent 는 OpenCode 크레덴셜을 저장하지 않음"). vendor OpenCode
-문서의 공식 "Ollama Cloud" 안내는 `/connect` 인터랙티브 TUI 를 전제로 하는데, 우리는
-헤드리스 컨테이너라 그 경로를 못 쓴다 — 대신 커스텀 provider 를 정적 JSON 으로 미리
-등록해 인터랙티브 스텝 자체를 없앤다 (`docs/decisions.md` L27).
-
-**구조 (L28, 사이드카 없음)**: Ollama Cloud 가 공식 지원하는 headless direct API 경로 —
-`https://ollama.com/v1` 에 `OLLAMA_API_KEY` 를 Bearer 로 직접 붙인다. 로컬 ollama 데몬을
-프록시로 세울 필요 없음(초안 L27 은 사이드카를 세웠으나 불필요하다는 게 드러나 제거).
-`compose/omnigent/host/opencode.json` 이 OpenCode 의 전역 config
-(`/root/.config/opencode/opencode.json` 로 마운트)로, custom provider 하나를 이 주소로
-등록한다.
-
-**`{env:VAR}` 치환 버그 — `{file:...}` 우회 필요**: OpenCode 의 config 는 `{env:VAR}` 로
-환경변수를 참조하는 문법을 지원하지만, custom provider 의 `apiKey` 필드에서는 알려진
-버그로 동작하지 않는다(vendor GitHub issue). 공식 문서화된 우회법은 `{file:<path>}` —
-파일 경로를 참조. 그래서 `compose/omnigent/compose.yml` 의 `omnigent-host` `command:` 를
-wrapper 셸 스크립트로 바꿔 `OLLAMA_API_KEY` env 를 `/root/.secrets/ollama_api_key` 파일로
-물질화한 뒤 원래 `omnigent host --server ...` 를 `exec` 한다.
+OpenCode 는 omnigent 의 provider 설정을 읽지 않고 자기 config 를 독립 관리한다. 헤드리스
+컨테이너라 vendor 의 인터랙티브 `/connect` 대신 커스텀 provider 를 정적 JSON 으로 등록,
+`https://ollama.com/v1` 에 direct API(Bearer) 로 직접 붙는다 — 사이드카 없음. 설계 근거:
+`docs/decisions.md` L27/L28.
 
 **설정**:
 1. https://ollama.com/settings/keys 에서 API 키 발급 → `OLLAMA_API_KEY` 로
@@ -324,11 +297,9 @@ wrapper 셸 스크립트로 바꿔 `OLLAMA_API_KEY` env 를 `/root/.secrets/olla
    로 파일이 정상 생성됐는지(값 자체는 출력하지 말 것). cloud 모델은 로컬 다운로드가
    없으므로 별도 pull 불필요.
 
-**세션 모델 지정은 `opencode.json` 이 아니라 `PATCH /v1/sessions/{id}` 로 한다** —
-omnigent 의 opencode-native 통합은 세션마다 격리된 전용 `XDG_CONFIG_HOME` 에서
-opencode 를 새로 띄우고, 사용자 전역 `opencode.json` 중 **`provider` 블록만** 병합한다
-(baseURL·apiKey·models·whitelist — 라우팅/인증/후보 제한). **최상위 `model`/`small_model`
-키는 절대 병합되지 않는다** — 여기 넣어도 죽은 설정이다. 실제로 모델을 강제하려면:
+**세션 모델 지정은 `opencode.json` 이 아니라 `PATCH /v1/sessions/{id}` 로 한다** — 최상위
+`model`/`small_model` 키는 병합되지 않는 죽은 설정이다(`docs/decisions.md` L28). 실제로
+모델을 강제하려면:
 
 ```bash
 curl -X PATCH http://agent.internal/v1/sessions/<session_id> \
@@ -336,13 +307,9 @@ curl -X PATCH http://agent.internal/v1/sessions/<session_id> \
   -d '{"model_override":"ollama-cloud/glm-5.2:cloud"}'
 ```
 
-(또는 웹 UI 모델 스위처로 첫 메시지 전 선택 — 둘 다 결국 `conversations.model_override`
-DB 컬럼에 써지고 turn 시작 시 executor 로 그대로 전달된다.) 미지정 시 OpenCode 가 provider
-의 라이브 모델 디스커버리(`https://ollama.com/v1/models`) 결과에서 자동 후보를 고르는데,
-거기 이미 단종된 모델이 섞여 있으면(`410 Gone`) 세션이 조용히 죽는다(2026-07-11 `rnj-1:8b`
-사례, `docs/decisions.md` L28) — `whitelist` 로 후보를 제한해도 방어되지만, 확실한 건
-`model_override` 명시다. 커스텀 agent spec 으로 자동 고정을 시도했으나(`executor.config.model`)
-효과 없었음 — 정확한 spec 필드명 미확인 상태.
+(또는 웹 UI 모델 스위처로 첫 메시지 전 선택.) 미지정 시 라이브 모델 디스커버리가 단종
+모델을 자동 선택해 세션이 조용히 죽을 수 있다 — `whitelist` 로 방어되지만 확실한 건
+`model_override` 명시다.
 
 인터랙티브 로그인이 없으므로(Codex 와 대조적으로) 배포 자동화에 별도 수동 개입이
 필요 없다.

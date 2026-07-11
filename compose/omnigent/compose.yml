@@ -3,27 +3,17 @@ services:
     image: ghcr.io/omnigent-ai/omnigent-server:${OMNIGENT_TAG:-latest}
     container_name: omnigent
     environment:
-      # postgres 는 ops-vm 호스트 (nexus network 없는 worker-vm 배치, L23) — tailnet IP 직결.
-      # omnigent user = 자기 DB(omnigent) 만 read-write. cross-DB 읽기는 omnigent_ro role
-      # 로 별도 발급 (dev-guide "Postgres read-only role 발급").
+      # postgres = ops-vm, tailnet IP 직결(nexus network 없는 worker-vm 배치, L23).
+      # cross-DB 읽기는 omnigent_ro role 로 별도 발급 (dev-guide "Postgres read-only role 발급").
       DATABASE_URL: postgresql+psycopg://${OMNIGENT_PG_USER}:${OMNIGENT_PG_PASSWORD}@${OPS_TAILNET_IP}:5432/${OMNIGENT_PG_DB}
       ARTIFACT_DIR: /data/artifacts
       HOST: 0.0.0.0
       PORT: "8000"
       OMNIGENT_ADMIN_CREDENTIALS_PATH: /data/admin-credentials
-      # 인증: single-user 모드 (L25). 이 서버는 harness 를 실행하지 않는 control-plane
-      # 뿐이고(vendor 아키텍처 — 실제 실행은 omnigent-host 러너), self-managed host 의
-      # WS 터널(/v1/runner/tunnel) 이 accounts 모드에서는 403 으로 거부되어 비활성화했다.
-      # L22/L23 이 accounts 를 "심층방어"로 유지하기로 한 것과 충돌하지만, self-managed
-      # host 를 쓰기로 한 시점에 감수하기로 한 트레이드오프 — 주 방어선은 tailnet 전용
-      # 노출(L23, WORKER_TAILNET_IP 바인드 + agent.internal)이다.
+      # single-user 모드 — self-managed host 의 WS 터널이 accounts 모드에서 403 되어 비활성화 (L25)
       OMNIGENT_AUTH_ENABLED: "0"
-      # single-user 모드(OMNIGENT_AUTH_ENABLED=0)는 docker entrypoint 가 자동으로
-      # OMNIGENT_LOCAL_SINGLE_USER=1 을 세팅한다(deploy/docker/entrypoint.py) — 이 상태에서
-      # multipart 엔드포인트(세션 생성·파일 업로드, 웹 UI 메시지 전송이 여기 걸림)는 Origin
-      # 헤더가 loopback 일 때만 허용된다(CSRF 방지, omnigent/server/ws_origin.py). Caddy 를
-      # 거쳐 agent.internal 로 접속하면 loopback 이 아니라 403 — 여기 명시적으로 allowlist.
-      # 스킴 포함, 트레일링 슬래시 없이 브라우저 Origin 과 정확히 일치해야 함(와일드카드 미지원).
+      # single-user 모드는 multipart 엔드포인트(세션 생성 등)를 Origin=loopback 에만 허용(CSRF 방지) —
+      # Caddy 경유 agent.internal 은 loopback 이 아니라 명시 allowlist 필요. 스킴 포함 정확히 일치, 와일드카드 미지원 (L25)
       OMNIGENT_WS_ALLOWED_ORIGINS: "http://agent.internal"
     volumes:
       - omnigent-data:/data
@@ -39,17 +29,13 @@ services:
       retries: 3
       start_period: 30s
 
-  # 실제 harness(claude-native/codex/opencode) 실행 러너. omnigent-server 는 control-plane
-  # 전용이라 harness 를 절대 실행하지 않는다(vendor 아키텍처, L25) — 이 컨테이너가
-  # `omnigent host --server http://omnigent:8000` 로 WS 터널을 열어 서버가 배정하는
-  # 세션을 실행한다. 커스텀 이미지 = vendor omnigent-host + opencode(vendor 이미지엔
-  # claude-code/codex/pi/kiro 는 있지만 opencode 는 없음) — compose/omnigent/host/Dockerfile.
+  # 실제 harness(claude-native/codex/opencode) 실행 러너 — omnigent-server 는 control-plane
+  # 뿐이라 harness 를 실행하지 않는다(vendor 아키텍처, L25). WS 터널로 서버가 배정하는 세션을 실행.
   omnigent-host:
     image: registry.internal:5000/omnigent-host:${OMNIGENT_HOST_TAG:-latest}
     container_name: omnigent-host
-    # OpenCode 의 opencode.json 이 Ollama Cloud apiKey 를 {file:/root/.secrets/ollama_api_key}
-    # 로 참조한다 — OpenCode 의 {env:VAR} 치환이 custom provider apiKey 필드에서 알려진
-    # 버그로 동작하지 않아(vendor GitHub issue), env 를 파일로 물질화하는 wrapper 필요 (L28).
+    # opencode.json 의 apiKey 는 {env:VAR} 가 custom provider 에서 동작하지 않는 vendor 버그로
+    # {file:...} 참조 — env 를 파일로 물질화하는 wrapper 필요 (L28)
     command:
       - sh
       - -c
@@ -62,47 +48,26 @@ services:
       omnigent:
         condition: service_healthy
     environment:
-      # 하니스 인증 — 웹 구독 사용(API 키 아님, L26). 실제로 이 컨테이너에서 하니스가
-      # 실행되므로 여기(server 아님).
-      #   - Claude: `claude setup-token`(로컬 1회 브라우저 인증)으로 만든 장기 토큰을
-      #     CLAUDE_CODE_OAUTH_TOKEN 으로 주입 — 컨테이너 안에서 로그인 불필요, portable.
-      #     ANTHROPIC_API_KEY/OMNIGENT_ANTHROPIC_API_KEY 와 동시에 설정하지 말 것 —
-      #     raw API 키가 우선 인식되어 구독 대신 종량 과금으로 갈 수 있음.
-      #   - Codex: ChatGPT **개인 Plus/Pro** 플랜은 헤드리스 토큰이 없음(vendor 문서 —
-      #     `~/.codex/auth.json` 이 사실상 1회용 refresh token이라 시크릿으로 주입 불가).
-      #     대신 배포 후 1회 `docker exec -it omnigent-host codex login --device-auth`
-      #     로 컨테이너 안에서 직접 로그인하고, 그 결과를 아래 볼륨(/root/.codex)으로
-      #     영속시킨다 (ChatGPT → Settings → Security 에서 device-code login 선행 활성화
-      #     필요). CODEX_ACCESS_TOKEN 은 Business/Enterprise 워크스페이스 전용이라 해당 없음.
+      # 하니스 인증 = 웹 구독, API 키 아님 (L26). Claude: `claude setup-token` 으로 만든 토큰.
+      # ANTHROPIC_API_KEY 와 동시 설정 금지 — raw API 키가 우선 인식되어 종량 과금으로 갈 수 있음.
+      # Codex: 개인 Plus/Pro 는 헤드리스 토큰 없음 — 배포 후 `docker exec -it omnigent-host
+      # codex login --device-auth` 로 컨테이너 안에서 직접 로그인, 결과는 아래 볼륨에 영속.
       CLAUDE_CODE_OAUTH_TOKEN: ${CLAUDE_CODE_OAUTH_TOKEN}
-      # OpenCode 의 Ollama Cloud provider 인증 (L28) — 위 wrapper 커맨드가 이 값을
-      # /root/.secrets/ollama_api_key 파일로 물질화, opencode.json 이 {file:...} 로 참조.
-      # 사이드카 없이 https://ollama.com/v1 에 직접 Bearer 인증.
+      # Ollama Cloud provider 인증 (L28) — wrapper 가 파일로 물질화, opencode.json 이 {file:...} 로 참조
       OLLAMA_API_KEY: ${OLLAMA_API_KEY}
-      # git-worker 에이전트(agents/git-worker/) 전용. 실제 값은 이 컨테이너(하니스가
-      # 도는 러너의 parent 프로세스)에만 존재 — 샌드박스 안 에이전트로는 전달되지 않는다.
-      #   - OMNIGENT_GH_TOKEN: fine-grained PAT. os_env.sandbox.credential_proxy
-      #     (gh_basic) 가 이 env 를 읽어 github.com/api.github.com 아웃바운드에만
-      #     실제 토큰을 주입한다 — 샌드박스는 합성 placeholder 만 봄.
-      #   - OMNIGENT_RONDO_RO_URL / OMNIGENT_POG_RO_URL: omnigent_ro role
-      #     (read-only, dev-guide "Postgres read-only role 발급") DSN. local tool
-      #     (tools/python/query_*_readonly.py) 이 parent 프로세스에서 직접 읽는다 —
-      #     os_env 샌드박스는 egress_rules 가 HTTP(S) 전용이라 어차피 Postgres TCP 를
-      #     못 나간다.
+      # git-worker 전용(agents/git-worker/), 값은 이 컨테이너(parent 프로세스)에만 존재:
+      #   - OMNIGENT_GH_TOKEN: fine-grained PAT, credential_proxy(gh_basic) 가 github.com
+      #     아웃바운드에만 주입 — 샌드박스는 합성 placeholder 만 봄
+      #   - OMNIGENT_RONDO_RO_URL / OMNIGENT_POG_RO_URL: omnigent_ro role DSN, local tool 이
+      #     parent 프로세스에서 직접 읽음(egress_rules 는 HTTP(S) 전용이라 Postgres TCP 는 못 나감)
       OMNIGENT_GH_TOKEN: ${OMNIGENT_GH_TOKEN}
       OMNIGENT_RONDO_RO_URL: ${OMNIGENT_RONDO_RO_URL}
       OMNIGENT_POG_RO_URL: ${OMNIGENT_POG_RO_URL}
     volumes:
-      # OpenCode 자체 provider 설정(Ollama Cloud, L28). OpenCode 는 omnigent 의 provider
-      # 설정을 읽지 않고 자기 전역 config(~/.config/opencode/opencode.json, host 는 root
-      # 실행)를 따로 관리한다. https://ollama.com/v1 에 direct API 로 붙는다 — 사이드카 없음
-      # (L27 초안은 로컬 ollama 사이드카로 프록시했으나, headless direct API 가 공식 지원되고
-      # 더 단순해 L28 에서 제거).
+      # OpenCode 자체 provider 설정 — omnigent 의 provider 설정과 무관, 독립 관리(L27/L28)
       - ./host/opencode.json:/root/.config/opencode/opencode.json:ro
       - omnigent-host-workspace:/data/workspace
-      # Codex 개인 플랜 로그인 영속 — 위 주석 참조. `codex login` 이 여기 쓴다.
       - omnigent-host-codex-auth:/root/.codex
-      # {file:...} 로 참조하는 Ollama Cloud API 키 파일(위 command wrapper 가 씀) 영속.
       - omnigent-host-secrets:/root/.secrets
     restart: unless-stopped
     mem_limit: 4g
