@@ -319,6 +319,10 @@ wrapper 셸 스크립트로 바꿔 `OLLAMA_API_KEY` env 를 `/root/.secrets/olla
    `worker-vm.enc.env` 에 저장(`omnigent-host` 컨테이너가 소비, wrapper 가 파일로 옮김).
 2. `compose/omnigent/host/opencode.json` 의 `models` 맵에 실제 쓸 cloud 모델 ID 를
    맞춘다(현재 `glm-5.2:cloud` — https://ollama.com/search?c=cloud 에서 카탈로그 확인).
+   **최상위 `model`/`small_model` 도 반드시 같이 지정할 것** — 비워두면 OpenCode 가
+   세션 제목 생성 등 백그라운드 작업용으로 provider 안의 임의 모델을 자동 선택하려
+   시도하는데, 그게 이미 단종된 모델이면(`410 Gone`) 세션 자체가 조용히 죽는다
+   (2026-07-11 `rnj-1:8b` 사례, `docs/decisions.md` L28).
 3. 배포 후 검증: `docker exec omnigent-host cat /root/.secrets/ollama_api_key | wc -c`
    로 파일이 정상 생성됐는지(값 자체는 출력하지 말 것). cloud 모델은 로컬 다운로드가
    없으므로 별도 pull 불필요.

@@ -14,5 +14,7 @@
         }
       }
     }
-  }
+  },
+  "model": "ollama-cloud/glm-5.2:cloud",
+  "small_model": "ollama-cloud/glm-5.2:cloud"
 }
