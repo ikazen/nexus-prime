@@ -307,6 +307,13 @@ repo 변경(compose/Caddyfile/env)은 main에 반영 완료. omnigent 는 worker
 3. **ghcr.io pull 가능 여부 확인**: `ghcr.io/omnigent-ai/omnigent-server`가 private면
    `echo $GHCR_TOKEN | docker login ghcr.io -u <user> --password-stdin` (`read:packages`) 먼저.
 4. **배포**: `git push` (이미 완료) → `bash scripts/deploy-worker-vm.sh`
+   **파일 바인드마운트(`opencode.json` 등) 만 바뀐 경우 주의**: `deploy-worker-vm.sh`(또는
+   수동 `docker compose up -d`)는 compose.yml 서비스 정의 자체가 안 바뀌면 컨테이너를
+   재생성하지 않는다 — `git pull` 이 호스트의 파일을 새 inode 로 교체해도, 이미 뜬
+   컨테이너는 기존 inode 를 계속 바라봐서 옛날 내용을 읽는다(단일 파일 바인드마운트의
+   흔한 함정, 디렉토리 마운트는 해당 없음). `opencode.json` 만 고쳤다면
+   `docker compose ... up -d --force-recreate omnigent-host` 로 명시적으로 재생성해야
+   반영된다(2026-07-11 확인).
 5. **상태 확인**: `docker logs omnigent`로 부팅 로그 확인, `docker logs omnigent-host`로 서버 터널
    등록(runner registered) 로그 확인, `docker exec omnigent-host cat /root/.secrets/ollama_api_key
    | wc -c` 로 Ollama Cloud 키 파일 물질화 확인(값 자체는 출력하지 말 것).
@@ -326,8 +333,11 @@ repo 변경(compose/Caddyfile/env)은 main에 반영 완료. omnigent 는 worker
 - tailnet 기기에서 `http://agent.internal` 접속 → single-user 모드라 로그인 화면 없이 바로 진입하는지 확인
 - 대화 1건 생성 → `docker restart omnigent` → 재접속 시 대화·설정 유지 (Postgres + `/data` 영속)
 - 웹 UI에서 claude-native 세션 실행 → 구독 인증으로 뜨는지(API 과금 아님) 확인
-- 웹 UI에서 opencode 세션 실행 → `/models` 에 `glm-5.2:cloud`(`opencode.json` 에 등록한 이름)가
-  보이는지, 실제 응답이 오는지 확인 — 커스텀 이미지(opencode 설치) 반영 여부도 겸해 확인
+- 웹 UI에서 opencode 세션 실행 → 첫 메시지 보내기 **전에** 모델 스위처에서 `glm-5.2:cloud`
+  선택(또는 `PATCH /v1/sessions/{id} {"model_override":"ollama-cloud/glm-5.2:cloud"}`) →
+  응답이 오는지 확인 — 미지정 시 provider 라이브 디스커버리가 단종 모델을 자동선택해 조용히
+  실패할 수 있음(`docs/dev-guide.md` "OpenCode — Ollama Cloud", `docs/decisions.md` L28).
+  커스텀 이미지(opencode 설치) 반영 여부도 겸해 확인
 - worker-vm → ops-vm:5432 tailnet 도달성: `nc -z <OPS_TAILNET_IP> 5432`
 - **[보류]** codex 세션, `docker restart omnigent-host` 후 Codex 로그인 유지 — Codex 재개 시 검증
 - **[git-worker]** git-worker 에이전트에 "repo X clone, 사소한 변경 후 브랜치 push, PR 생성" 지시 →

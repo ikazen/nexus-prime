@@ -12,9 +12,8 @@
         "glm-5.2:cloud": {
           "name": "GLM-5.2 (Ollama Cloud)"
         }
-      }
+      },
+      "whitelist": ["glm-5.2:cloud"]
     }
-  },
-  "model": "ollama-cloud/glm-5.2:cloud",
-  "small_model": "ollama-cloud/glm-5.2:cloud"
+  }
 }
