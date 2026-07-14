@@ -261,8 +261,11 @@ raw TCP 는 나갈 수 없다. 그래서 DB 조회는 `os_env` 밖의 local tool
 
 ### omnigent host 이미지 빌드
 
-`omnigent-host` 는 vendor 이미지에 opencode 만 얹은 커스텀 이미지
-(`compose/omnigent/host/Dockerfile`, 근거: L25).
+`omnigent-host` 는 vendor 이미지에 opencode + gh CLI 를 얹은 커스텀 이미지
+(`compose/omnigent/host/Dockerfile`, 근거: L25). gh CLI 는 vendor 이미지에 apt 저장소 등록용
+gpg 가 없어 `.deb` 직접 설치(`GH_CLI_VERSION` build arg 로 버전 고정) — 인터랙티브 세션·
+git-worker 둘 다 git 인증은 되어도 `gh` 바이너리 자체가 없으면 `gh pr create`/`gh repo view`
+가 전부 실패했던 gap 을 메운다.
 
 worker-vm 은 ARM64(OCI A1.Flex) — vendor 이미지는 linux/arm64 매니페스트 지원.
 `opencode-ai` npm 패키지의 arm64 네이티브 의존성 빌드는 QEMU 에뮬레이션보다

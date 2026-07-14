@@ -22,8 +22,8 @@ vendor 아키텍처가 control-plane 과 harness 실행을 분리한다(L25):
   볼륨(artifacts·admin-credentials)에 상태 저장. 이미지 = vendor `omnigent-server` 그대로
 - **`omnigent-host` (runner)** — 실제 harness 실행. `omnigent host --server http://omnigent:8000` 로
   WS 터널(`/v1/runner/tunnel`) dial-in, server 가 배정하는 세션을 실행. 이미지 = vendor `omnigent-host`
-  + opencode 레이어(`compose/omnigent/host/Dockerfile`) — vendor 이미지엔 claude-code/codex/pi/kiro-cli
-  는 있지만 opencode 가 없어서 얹음. worker-vm ARM64 네이티브 빌드
+  + opencode·gh CLI 레이어(`compose/omnigent/host/Dockerfile`) — vendor 이미지엔
+  claude-code/codex/pi/kiro-cli 는 있지만 opencode 와 gh CLI 가 없어서 얹음. worker-vm ARM64 네이티브 빌드
 
 두 컨테이너는 `docker compose` 서비스 `depends_on: condition: service_healthy` 로 순서 보장.
 
