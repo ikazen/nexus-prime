@@ -217,6 +217,37 @@ repo 를 clone·수정·push·PR 생성까지 하되, 로컬 파일·임의 네�
 는 `sandbox.egress_rules` 가 non-empty, `sandbox.type` 이 `linux_bwrap`/`darwin_seatbelt`
 여야 동작 — macOS 의 `gh_basic` 은 미지원이지만 worker-vm 은 Linux 라 해당 없음.
 
+### 인터랙티브 세션 GitHub 인증
+
+사용자가 agent.internal 웹 UI 에서 직접 만드는 세션(git-worker 가 아닌 일반 세션)은 위
+`credential_proxy` 경로를 타지 않아 기본적으로 `git`/`gh` 인증이 없다 — private repo clone
+이 404 로 실패한다.
+
+**PAT 발급** (git-worker 의 `OMNIGENT_GH_TOKEN` 과 별개 토큰, scope 재사용 금지):
+
+1. https://github.com/settings/personal-access-tokens/new
+   - Resource owner: 본인 계정
+   - Repository access: 인터랙티브로 다룰 repo 만 선택 (Selected repositories)
+   - Permissions: Contents = Read and write, Pull requests = Read and write,
+     Metadata = Read-only. 그 외 No access
+   - Expiration: 짧게 + 주기적 로테이션
+2. 값을 `OMNIGENT_INTERACTIVE_GH_TOKEN` 으로 `worker-vm.enc.env` 에 저장(SOPS 재암호화) —
+   `omnigent-host` 서비스가 소비.
+
+**동작 방식**: `omnigent-host` 기동 command wrapper 가 이 값을 `/root/.git-credentials` +
+`gh auth login` 으로 물질화한 뒤 `exec omnigent host` 전에 `unset` 한다. 이후 host 프로세스가
+spawn 하는 어떤 세션의 env 에도 원문 토큰이 남지 않는다 — 인터랙티브 세션은 물질화된
+credential 파일을 그대로 읽어 인증되고, git-worker 샌드박스는 애초에 이 토큰을 보지 않는다
+(자기 `OMNIGENT_GH_TOKEN` 만 씀).
+
+**주의**: 인터랙티브 세션 자체는 git-worker 와 달리 격리 샌드박스가 아니다 — 세션 안에서
+`cat ~/.git-credentials` 하면 토큰 원문이 보인다. scope 를 Selected repositories + 필요
+권한만으로 좁게 유지하는 게 유일한 방어선이다.
+
+**검증**: 배포 후 인터랙티브 세션에서 `git clone`/`gh repo view` 로 대상 repo 인증 확인.
+`docker exec omnigent-host sh -c 'tr "\0" "\n" < /proc/1/environ | grep INTERACTIVE'` 가
+빈 결과여야 함(host 프로세스 env 에 unset 반영 확인).
+
 ### DB read-only 조회
 
 `egress_rules` 를 켜면 샌드박스의 유일한 아웃바운드가 HTTP(S) MITM 프록시가 되어 Postgres

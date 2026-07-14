@@ -37,6 +37,12 @@ vendor 아키텍처가 control-plane 과 harness 실행을 분리한다(L25):
   정확히 일치, 와일드카드 미지원)
 - 하니스 실행 인증은 API 키가 아니라 **웹 구독**(L26) — Claude 는 `CLAUDE_CODE_OAUTH_TOKEN`(portable),
   Codex 는 컨테이너 내 device-auth 로그인이 필요해 현재 사용자 요청으로 보류
+- **GitHub 인증(인터랙티브 세션)** — 사용자가 직접 만드는 세션(웹 UI)은 git-worker 의
+  `credential_proxy` 경로를 타지 않아 기본적으로 GitHub 인증이 없다. `OMNIGENT_INTERACTIVE_GH_TOKEN`
+  (git-worker 전용 `OMNIGENT_GH_TOKEN` 과 별개 토큰)을 `omnigent-host` 기동 wrapper 가
+  `/root/.git-credentials` + `gh auth login` 으로 물질화한 뒤 `exec` 전에 `unset` — 이후
+  spawn 되는 모든 세션(git-worker 샌드박스 포함) env 에는 원문 토큰이 남지 않는다. 발급·검증
+  절차는 `docs/dev-guide.md` "인터랙티브 세션 GitHub 인증"
 
 ## 하니스 provider
 

@@ -43,6 +43,17 @@ services:
         mkdir -p /root/.secrets
         printf '%s' "$$OLLAMA_API_KEY" > /root/.secrets/ollama_api_key
         chmod 600 /root/.secrets/ollama_api_key
+        # 인터랙티브 세션(사용자가 직접 만드는 세션)용 GitHub 인증 물질화.
+        # git-worker 의 OMNIGENT_GH_TOKEN(credential_proxy) 과는 별개 토큰 —
+        # 여기서 credential 파일로 옮긴 뒤 exec 전에 unset 해서, 이후 spawn 되는
+        # 어떤 세션(git-worker 샌드박스 포함)의 env 에도 원문 토큰이 남지 않게 한다.
+        if [ -n "$$OMNIGENT_INTERACTIVE_GH_TOKEN" ]; then
+          git config --global credential.helper store
+          printf 'https://x-access-token:%s@github.com\n' "$$OMNIGENT_INTERACTIVE_GH_TOKEN" > /root/.git-credentials
+          chmod 600 /root/.git-credentials
+          command -v gh >/dev/null 2>&1 && printf '%s' "$$OMNIGENT_INTERACTIVE_GH_TOKEN" | gh auth login --with-token 2>/dev/null || true
+        fi
+        unset OMNIGENT_INTERACTIVE_GH_TOKEN
         exec omnigent host --server http://omnigent:8000
     depends_on:
       omnigent:
@@ -63,6 +74,9 @@ services:
       OMNIGENT_GH_TOKEN: ${OMNIGENT_GH_TOKEN}
       OMNIGENT_RONDO_RO_URL: ${OMNIGENT_RONDO_RO_URL}
       OMNIGENT_POG_RO_URL: ${OMNIGENT_POG_RO_URL}
+      # 인터랙티브 세션 전용 GitHub 인증. OMNIGENT_GH_TOKEN(git-worker 전용)과 별개 토큰 —
+      # command wrapper 가 credential 파일로 물질화 후 unset 한다.
+      OMNIGENT_INTERACTIVE_GH_TOKEN: ${OMNIGENT_INTERACTIVE_GH_TOKEN}
     volumes:
       # OpenCode 자체 provider 설정 — omnigent 의 provider 설정과 무관, 독립 관리(L27/L28)
       - ./host/opencode.json:/root/.config/opencode/opencode.json:ro
