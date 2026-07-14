@@ -20,9 +20,10 @@ for r in reflexion-rondo pot-of-greed enemy-controller airflow-stack; do
   fi
 done
 
-# ~/.claude 를 claude-config 작업트리로 오버레이. vendor 런타임 파일(cache/sessions/
-# plugins 등)은 claude-config 의 .gitignore '*' allowlist 로 보존된다 — tracked config
-# 만 checkout 대상.
+# ~/.claude 를 claude-config 작업트리로 오버레이. 신선한 컨테이너에선 vendor 가 세션을
+# 한 번도 안 띄워 디렉토리 자체가 없을 수 있다(mkdir 로 보장) — 있는 경우엔 런타임 파일
+# (cache/sessions/plugins 등)이 claude-config 의 .gitignore '*' allowlist 로 보존된다.
+mkdir -p "$CLAUDE_DIR"
 if [ ! -d "$CLAUDE_DIR/.git" ]; then
   git -C "$CLAUDE_DIR" init -q
   git -C "$CLAUDE_DIR" remote add origin "$CLAUDE_CONFIG_REPO" 2>/dev/null \
