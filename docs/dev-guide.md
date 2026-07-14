@@ -229,7 +229,8 @@ repo 를 clone·수정·push·PR 생성까지 하되, 로컬 파일·임의 네�
    - Resource owner: 본인 계정
    - Repository access: 인터랙티브로 다룰 repo 만 선택 (Selected repositories)
    - Permissions: Contents = Read and write, Pull requests = Read and write,
-     Metadata = Read-only. 그 외 No access
+     Issues = Read and write (이슈 생성·댓글·close 워크플로 사용 시 필요), Metadata = Read-only.
+     그 외 No access
    - Expiration: 짧게 + 주기적 로테이션
 2. 값을 `OMNIGENT_INTERACTIVE_GH_TOKEN` 으로 `worker-vm.enc.env` 에 저장(SOPS 재암호화) —
    `omnigent-host` 서비스가 소비.
