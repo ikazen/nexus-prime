@@ -227,7 +227,10 @@ repo 를 clone·수정·push·PR 생성까지 하되, 로컬 파일·임의 네�
 
 1. https://github.com/settings/personal-access-tokens/new
    - Resource owner: 본인 계정
-   - Repository access: 인터랙티브로 다룰 repo 만 선택 (Selected repositories)
+   - Repository access: 인터랙티브로 다룰 repo 만 선택 (Selected repositories). **`ikazen/claude-config`
+     는 필수 포함** — private repo 라 이 토큰 없이는 초기 워크스페이스의 `~/.claude` 오버레이가
+     실패한다("인터랙티브 세션 초기 워크스페이스" 절 참조). 나머지 project repo(reflexion-rondo 등)는
+     public 이라 clone 자체엔 불필요, push 까지 하려는 repo 만 추가
    - Permissions: Contents = Read and write, Pull requests = Read and write,
      Issues = Read and write (이슈 생성·댓글·close 워크플로 사용 시 필요), Metadata = Read-only.
      그 외 No access
@@ -248,6 +251,40 @@ credential 파일을 그대로 읽어 인증되고, git-worker 샌드박스는 �
 **검증**: 배포 후 인터랙티브 세션에서 `git clone`/`gh repo view` 로 대상 repo 인증 확인.
 `docker exec omnigent-host sh -c 'tr "\0" "\n" < /proc/1/environ | grep INTERACTIVE'` 가
 빈 결과여야 함(host 프로세스 env 에 unset 반영 확인).
+
+### 인터랙티브 세션 초기 워크스페이스
+
+`compose/omnigent/host/init-workspace.sh` 가 `omnigent-host` 기동 시(credential 물질화
+직후) 자동 실행되어 `~/projects/`(project repo 4개 clone)와 `~/.claude`(claude-config
+오버레이)를 세팅한다 — 배경·메커니즘은 `docs/omnigent.md` "인터랙티브 세션 초기
+워크스페이스" 절.
+
+이미지 rebuild 불필요(마운트) — 스크립트 수정 후 배포는:
+```bash
+ssh worker-vm
+cd ~/nexus-prime && git pull
+docker compose -f compose/_hosts/worker-vm.yml --env-file compose/_hosts/worker-vm.env up -d omnigent-host
+```
+
+**검증**:
+```bash
+docker exec omnigent-host sh -c '
+  ls ~/projects
+  git -C ~/.claude remote -v
+  ls ~/.claude/hooks ~/.claude/secrets
+  head -c1 ~/.claude/settings.json >/dev/null && echo settings-ok
+'
+```
+4개 project repo + `claude-config` remote + `hooks/`/`secrets/` + `settings.json`(=
+`settings.omni.json` 사본) 존재 확인.
+
+**훅 실제 발동 확인(핵심)** — 인터랙티브 세션에서:
+- `gh issue create` 본문에 `~/.claude/secrets/sensitive-identifiers.txt` 의 식별자를 넣어
+  시도 → `check-github-content.sh` 가 차단하는지
+- 여러 줄 커밋 메시지 시도 → `enforce-single-line-commit.sh` 가 차단하는지
+
+차단 안 되면: omnigent 이 `--setting-sources all` 로 실행하는지(vendor 버전업으로 기본값이
+바뀌었을 수 있음) 세션 내 `claude` 실행 인자를 재확인.
 
 ### DB read-only 조회
 
