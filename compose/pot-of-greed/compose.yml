@@ -10,7 +10,9 @@ services:
       OLLAMA_BASE_URL: http://${MAC_TAILNET_IP}:11434
       OLLAMA_CLOUD_BASE_URL: ${OLLAMA_CLOUD_BASE_URL}
       OLLAMA_API_KEY: ${OLLAMA_API_KEY}
-      LLM_MODEL: glm-5.2:cloud
+      LLM_PROVIDER: ${POG_LLM_PROVIDER:-gemini}
+      GEMINI_API_KEY: ${POG_GEMINI_API_KEY}
+      GEMINI_MODEL: ${POG_GEMINI_MODEL:-gemini-2.5-flash}
       JWT_SECRET: ${POG_JWT_SECRET}
       AUTH_USERS: ${POG_AUTH_USERS}
     restart: unless-stopped
