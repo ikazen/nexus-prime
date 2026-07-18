@@ -17,6 +17,9 @@ scp "$(dirname "$0")/../compose/monitoring/alertmanager.yml" \
 echo "--- ops-vm.env 복호화 ---"
 ssh "$OPS_VM" "cd ~/nexus-prime && sops --input-type dotenv --output-type dotenv -d compose/_hosts/ops-vm.enc.env > compose/_hosts/ops-vm.env"
 
+echo "--- registry 이미지 pull (floating latest 태그는 up -d만으로 재pull 안 됨) ---"
+ssh "$OPS_VM" "cd ~/nexus-prime && docker compose -f compose/_hosts/ops-vm.yml --env-file compose/_hosts/ops-vm.env pull pot-of-greed-api pot-of-greed-ui"
+
 echo "--- dnsmasq 재빌드 ---"
 ssh "$OPS_VM" "cd ~/nexus-prime && docker compose -f compose/_hosts/ops-vm.yml --env-file compose/_hosts/ops-vm.env build dnsmasq"
 
