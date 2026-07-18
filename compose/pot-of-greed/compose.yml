@@ -17,7 +17,7 @@ services:
       AUTH_USERS: ${POG_AUTH_USERS}
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "python3 -c \"import socket; socket.create_connection(('localhost', 8000))\""]
+      test: ["CMD-SHELL", "python3 -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/healthz')\""]
       interval: 30s
       timeout: 10s
       retries: 3
