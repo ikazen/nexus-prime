@@ -116,14 +116,23 @@ claude 인증은 macOS 로그인 키체인에 저장돼 있고, **키체인은 S
 키체인 접근이 막힌다(실측 확인됨). 그래서 상주 브리지 대신 매 실행마다 실제 SSH 인증을
 거치는 구조를 쓴다.
 
-전용 키를 발급하고 forced command 로 이 키가 claude ping 외 아무 것도 못 하게 제한:
+전용 키를 발급하고 forced command 로 이 키가 claude ping 외 아무 것도 못 하게 제한.
+forced command 는 mac sleep/wake 직후 claude 가 일시 실패해도 셀프 복구하도록 10회
+재시도 루프(30초 간격)로 구성 — DAG 쪽이 스케줄 더블탭(1분 간격 2회 발사)으로 하던
+재시도 역할을 이 루프로 이관하면서 DAG 스케줄은 단발 4회로 단순화됨.
 
 ```bash
 ssh-keygen -t ed25519 -f ~/.ssh/airflow_claude_ping -N "" -C "airflow-daily-claude-ping"
 
-# authorized_keys 에 forced command + restrict 로 추가 (claude 실제 경로는 `which claude` 로 확인)
+# claude 실제 경로 확인 후 아래 <CLAUDE> 를 치환
+which claude
+
+# authorized_keys 에 forced command(재시도 루프) + restrict 로 추가
+# 내부 큰따옴표는 authorized_keys 한 줄 규칙 때문에 \" 로 이스케이프
 PUBKEY=$(cat ~/.ssh/airflow_claude_ping.pub)
-echo "command=\"$(which claude) -p ㅎㅇ\",restrict $PUBKEY" >> ~/.ssh/authorized_keys
+cat >> ~/.ssh/authorized_keys <<EOF
+command="for i in {1..10}; do out=\$(<CLAUDE> -p \"ping\" 2>&1) && { printf '%s\n' \"\$out\"; exit 0; }; sleep 30; done; echo \"ping failed: \$out\" >&2; exit 1",restrict $PUBKEY
+EOF
 ```
 
 개인키(`~/.ssh/airflow_claude_ping`)는 base64 로 인코딩해 `airflow-stack` 의
