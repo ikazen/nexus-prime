@@ -348,3 +348,14 @@ omnigent 는 worker-vm 배치, tailnet 전용 노출(L23). repo 변경 완료 �
 - **[git-worker]** 에이전트에게 워크스페이스 밖 경로(`/etc/passwd`, `/data/artifacts` 등) 읽기 시도 지시 → 차단 확인
 - **[git-worker]** 에이전트에게 github.com/api.github.com 외 도메인 접근 시도 지시(예: `curl https://example.com`) → 차단 확인
 - **[git-worker]** `query_rondo_readonly`/`query_pog_readonly` 로 SELECT 성공, 비-SELECT(INSERT 등) 시도 시 tool 자체 거부 + DB role 도 거부 이중 확인
+
+## pot-of-greed 배포
+
+빌드는 로컬이 아니라 **airflow-stack `pot_of_greed_deploy` DAG**(ops-vm 큐 docker.sock)가 담당한다 — 로컬 dockerd의 insecure-registry 설정 불필요. cutover만 로컬 `release-pog.sh`(SSH 기반). reflexion-rondo(빌드 DAG + `deploy/release.sh`)와 동일한 분리 구조.
+
+1. **빌드**: Airflow UI → `pot_of_greed_deploy` → "Trigger DAG w/ config" → `{"tag": "vX.Y.Z"}`.
+   `build_api`(`Dockerfile`)/`build_ui`(`ui/Dockerfile`, `ui/` 컨텍스트) 두 이미지를 registry에 push.
+2. **cutover**: WSL에서 `bash scripts/release-pog.sh vX.Y.Z`.
+   가드(pot-of-greed main clean/sync) → registry 태그 존재 확인 → `compose/pot-of-greed/compose.yml` 태그 bump+commit+push → ops-vm에서 `pot-of-greed-api`/`pot-of-greed-ui` 두 서비스만 pull+`up -d` → `pot-of-greed-api.internal/healthz` 확인.
+
+이미지 태그는 `compose/pot-of-greed/compose.yml` 평문에 박혀 있다(`${POG_TAG}` 아님) — 어느 커밋이 떠 있는지는 그 파일이 진실 소스. 전체 ops-vm 스택 재배포가 필요하면 `deploy-ops-vm.sh`(핀된 태그 그대로 pull).

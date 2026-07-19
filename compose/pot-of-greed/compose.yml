@@ -1,6 +1,6 @@
 services:
   pot-of-greed-api:
-    image: registry.internal:5000/pot-of-greed:${POG_TAG:-latest}
+    image: registry.internal:5000/pot-of-greed:v0.1.0
     container_name: pot-of-greed-api
     environment:
       PG_DSN: postgresql://${POG_PG_USER}:${POG_PG_PASSWORD}@postgres:5432/${POG_PG_DB}
@@ -26,7 +26,7 @@ services:
       - nexus
 
   pot-of-greed-ui:
-    image: registry.internal:5000/pot-of-greed-ui:${POG_TAG:-latest}
+    image: registry.internal:5000/pot-of-greed-ui:v0.1.0
     container_name: pot-of-greed-ui
     environment:
       API_BASE_URL: http://pot-of-greed-api:8000

@@ -45,7 +45,8 @@ sed -i '/^# pot-of-greed$/,/^POG_CHAINLIT_AUTH_SECRET=/d' "$PLAIN"
 cat >> "$PLAIN" <<EOF
 
 # pot-of-greed
-POG_TAG=latest
+# 이미지 태그는 compose/pot-of-greed/compose.yml에 평문으로 박혀 있고 release-pog.sh가
+# bump한다 — POG_TAG env는 더 이상 쓰지 않는다(#20).
 POG_PG_USER=$POG_PG_USER
 POG_PG_PASSWORD=$POG_PG_PASSWORD
 POG_PG_DB=$POG_PG_DB
