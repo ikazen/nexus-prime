@@ -117,21 +117,30 @@ claude 인증은 macOS 로그인 키체인에 저장돼 있고, **키체인은 S
 거치는 구조를 쓴다.
 
 전용 키를 발급하고 forced command 로 이 키가 claude ping 외 아무 것도 못 하게 제한.
-forced command 는 mac sleep/wake 직후 claude 가 일시 실패해도 셀프 복구하도록 10회
-재시도 루프(30초 간격)로 구성 — DAG 쪽이 스케줄 더블탭(1분 간격 2회 발사)으로 하던
-재시도 역할을 이 루프로 이관하면서 DAG 스케줄은 단발 4회로 단순화됨.
+재시도 루프(10회, 30초 간격)는 `airflow-claude-ping.sh` 로 분리 — mac sleep/wake 직후
+claude 가 일시 실패하는 경우의 셀프 복구용이며, `authorized_keys` 한 줄 인라인으로는
+조건 분기(인증 만료 감지)를 넣기 어려워 스크립트로 뺐다. **claude 인증 만료
+(`Not logged in`) 는 재시도로 복구되지 않으므로 루프를 즉시 중단하고 실패 반환** —
+airflow-stack DAG 가 이 메시지를 감지해 fast-fail 처리한다(retries 미소진).
+DAG 쪽 스케줄은 단발 4회.
 
 ```bash
 ssh-keygen -t ed25519 -f ~/.ssh/airflow_claude_ping -N "" -C "airflow-daily-claude-ping"
 
-# claude 실제 경로 확인 후 아래 <CLAUDE> 를 치환
+# claude 실제 경로 확인
 which claude
 
-# authorized_keys 에 forced command(재시도 루프) + restrict 로 추가
-# 내부 큰따옴표는 authorized_keys 한 줄 규칙 때문에 \" 로 이스케이프
+# 스크립트 배포 (nexus-prime hosts/mac-server/airflow-claude-ping.sh)
+# <CLAUDE> 를 위 경로로 치환 후 배치, 실행 권한 부여
+cp hosts/mac-server/airflow-claude-ping.sh ~/.local/bin/airflow-claude-ping.sh
+chmod 755 ~/.local/bin/airflow-claude-ping.sh
+$EDITOR ~/.local/bin/airflow-claude-ping.sh   # <CLAUDE> 치환
+
+# authorized_keys 에 forced command + restrict 로 추가
+# command= 는 셸 확장 안 됨 — $HOME 대신 절대경로 사용
 PUBKEY=$(cat ~/.ssh/airflow_claude_ping.pub)
 cat >> ~/.ssh/authorized_keys <<EOF
-command="for i in {1..10}; do out=\$(<CLAUDE> -p \"ping\" 2>&1) && { printf '%s\n' \"\$out\"; exit 0; }; sleep 30; done; echo \"ping failed: \$out\" >&2; exit 1",restrict $PUBKEY
+command="/Users/<your-user>/.local/bin/airflow-claude-ping.sh",restrict $PUBKEY
 EOF
 ```
 
