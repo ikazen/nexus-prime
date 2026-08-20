@@ -3,7 +3,7 @@ services:
     image: registry.internal:5000/pot-of-greed:v0.1.2
     container_name: pot-of-greed-api
     environment:
-      # 세법/판례 코퍼스는 potofgreed DB가 아니라 별도 lawcorpus DB(law-corpus 라이브러리
+      # 세법/판례 코퍼스는 potofgreed DB가 아니라 별도 lawcorpus DB(the-book-of-moon 라이브러리
       # 소유) — Chainlit UI의 CHAINLIT_DB_DSN(아래)은 여전히 POG_PG_*(potofgreed DB)를 쓴다.
       PG_DSN: postgresql://${LAWCORPUS_PG_USER}:${LAWCORPUS_PG_PASSWORD}@postgres:5432/${LAWCORPUS_PG_DB}
       NEO4J_URI: bolt://neo4j:7687

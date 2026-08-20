@@ -7,7 +7,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 ENC_ENV="$SCRIPT_DIR/../compose/_hosts/ops-vm.enc.env"
-LAWCORPUS_ENV="$SCRIPT_DIR/../../law-corpus/.env"
+LAWCORPUS_ENV="$SCRIPT_DIR/../../the-book-of-moon/.env"
 
 if [ ! -f "$LAWCORPUS_ENV" ]; then
   echo "ERROR: $LAWCORPUS_ENV not found"
