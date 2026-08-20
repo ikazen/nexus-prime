@@ -1,6 +1,6 @@
 services:
   pot-of-greed-api:
-    image: registry.internal:5000/pot-of-greed:v0.1.1
+    image: registry.internal:5000/pot-of-greed:v0.1.2
     container_name: pot-of-greed-api
     environment:
       # 세법/판례 코퍼스는 potofgreed DB가 아니라 별도 lawcorpus DB(law-corpus 라이브러리
@@ -28,7 +28,7 @@ services:
       - nexus
 
   pot-of-greed-ui:
-    image: registry.internal:5000/pot-of-greed-ui:v0.1.1
+    image: registry.internal:5000/pot-of-greed-ui:v0.1.2
     container_name: pot-of-greed-ui
     environment:
       API_BASE_URL: http://pot-of-greed-api:8000
