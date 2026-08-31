@@ -160,12 +160,12 @@ EOF
 log "2/8 Colima 기동 확인 ..."
 mac_ssh <<'EOF' || die "Colima 를 기동하지 못함 — 맥에서 'colima start' 수동 확인"
 set -e
-if colima status 2>&1 | grep -q "colima is running"; then
+if colima status </dev/null 2>&1 | grep -q "colima is running"; then
     echo "  ok: 이미 running"
 else
     echo "  미기동 — LaunchAgent kickstart"
-    launchctl kickstart -k "gui/$(id -u)/local.airflow.colima" 2>/dev/null \
-        || colima start -f &
+    launchctl kickstart -k "gui/$(id -u)/local.airflow.colima" </dev/null 2>/dev/null \
+        || colima start -f </dev/null &
     for i in $(seq 1 60); do
         docker info >/dev/null 2>&1 && { echo "  docker 응답 ($((i*2))s)"; break; }
         sleep 2
@@ -178,7 +178,7 @@ EOF
 log "3/8 DOCKER_GID 정합성 확인 ..."
 mac_ssh <<EOF || warn "DOCKER_GID 확인 건너뜀"
 set -e
-vm_gid=\$(colima ssh -- getent group docker 2>/dev/null | cut -d: -f3)
+vm_gid=\$(colima ssh -- getent group docker </dev/null 2>/dev/null | cut -d: -f3)
 env_gid=\$(grep -E '^DOCKER_GID=' "$MAC_ENV_FILE" 2>/dev/null | cut -d= -f2)
 if [[ -z "\$vm_gid" ]]; then
     echo "  Colima VM docker gid 조회 실패 — skip"
@@ -200,20 +200,22 @@ docker network inspect nexus >/dev/null 2>&1 || docker network create nexus
 docker compose -f compose/_hosts/mac-server.yml --env-file compose/_hosts/mac-server.env up -d
 EOF
 
-# ---- 5. LaunchAgent 3종 ------------------------------------------------------
+# ---- 5. LaunchAgent (colima / node_exporter 필수, rclone-minio 선택) ---------
 log "5/8 LaunchAgent (colima / node_exporter / rclone-minio) ..."
 mac_ssh <<'EOF' || warn "LaunchAgent 확인 중 문제"
 uid=$(id -u)
 for label in local.airflow.colima local.node_exporter local.rclone-minio; do
     if launchctl print "gui/$uid/$label" >/dev/null 2>&1; then
         echo "  ok: $label"
+        continue
+    fi
+    plist="$HOME/Library/LaunchAgents/$label.plist"
+    if [[ -f "$plist" ]] && launchctl load "$plist" 2>/dev/null; then
+        echo "  loaded: $label"
+    elif [[ "$label" == local.rclone-minio ]]; then
+        echo "  -- $label 미설정 (선택 — README 'rclone MinIO 마운트')"
     else
-        plist="$HOME/Library/LaunchAgents/$label.plist"
-        if [[ -f "$plist" ]] && launchctl load "$plist" 2>/dev/null; then
-            echo "  loaded: $label"
-        else
-            echo "  !! $label 미로드 ($plist 없음/실패) — README 셋업 절차 확인"
-        fi
+        echo "  !! $label 미로드 ($plist 없음/실패) — README 셋업 절차 확인"
     fi
 done
 EOF
@@ -223,6 +225,11 @@ log "6/8 sleepwatcher + ~/.wakeup ..."
 mac_ssh <<'EOF' || warn "sleepwatcher 확인 중 문제"
 if [[ ! -x "$HOME/.wakeup" ]]; then
     echo "  !! ~/.wakeup 없음/비실행 — airflow-stack docs/setup.md 'sleep/wake 자동 복구' 참조"
+elif grep -qE 'force-recreate[[:space:]]+edge-worker([[:space:]]|$)' "$HOME/.wakeup"; then
+    # 낡은 서비스명. 실제는 edge-worker-default / edge-worker-big → wake 훅이 매번 조용히 실패.
+    echo "  !! ~/.wakeup 이 낡은 서비스명 'edge-worker' 참조 — 실제는 edge-worker-default/edge-worker-big."
+    echo "     wake 자동 복구가 안 됨. ~/.wakeup 의 마지막 줄을 다음으로 고치세요:"
+    echo "       ... up -d --force-recreate edge-worker-default edge-worker-big"
 fi
 if brew services list 2>/dev/null | grep -E '^sleepwatcher' | grep -q started; then
     echo "  ok: sleepwatcher started"
@@ -273,10 +280,20 @@ for _ in $(seq 1 40); do
 done
 
 mac_probe=$(mac_ssh <<'EOF' 2>/dev/null || true
-printf 'minio_mount='
-ls "$HOME/minio/models" >/dev/null 2>&1 && echo ok || echo FAIL
-printf 'containers='
-docker ps --format '{{.Names}}' | grep -E '^(minio|promtail)$' | paste -sd, -
+printf 'minio_container='
+docker ps --format '{{.Names}}' | grep -qx minio && echo ok || echo FAIL
+printf 'promtail_container='
+docker ps --format '{{.Names}}' | grep -qx promtail && echo ok || echo FAIL
+# rclone MinIO 로컬 마운트는 선택 기능 (macfuse + LaunchAgent 별도 셋업, README 참조).
+# LaunchAgent plist 가 있어야 이 호스트가 마운트를 쓰기로 한 것.
+printf 'rclone_mount='
+if [[ ! -f "$HOME/Library/LaunchAgents/local.rclone-minio.plist" ]]; then
+    echo not-configured
+elif ls "$HOME/minio" >/dev/null 2>&1 && mount | grep -q "$HOME/minio"; then
+    echo ok
+else
+    echo DOWN
+fi
 EOF
 )
 node_up=$(ops_ssh <<'EOF' 2>/dev/null || true
@@ -295,7 +312,14 @@ echo "  ================================================"
 fail=0
 [[ "$ok_workers" == 1 ]] || { warn "edge worker 가 idle/running 아님"; fail=1; }
 [[ "$node_up" == "1" ]]  || { warn "Prometheus node_mac_server up != 1 ($node_up)"; fail=1; }
-grep -q 'minio_mount=ok' <<<"$mac_probe" || { warn "rclone MinIO 마운트 확인 실패"; fail=1; }
+grep -q 'minio_container=ok'    <<<"$mac_probe" || { warn "MinIO 컨테이너 안 뜸 (data lake S3)"; fail=1; }
+grep -q 'promtail_container=ok' <<<"$mac_probe" || { warn "promtail 컨테이너 안 뜸 (로그 수집)"; fail=1; }
+
+case "$mac_probe" in
+    *rclone_mount=ok*)             ;;
+    *rclone_mount=not-configured*) log "  rclone MinIO 로컬 마운트: 이 호스트 미설정 (선택 — README 'rclone MinIO 마운트')" ;;
+    *rclone_mount=DOWN*)           warn "rclone MinIO 마운트 down (LaunchAgent 는 있음) — 맥에서 직접 확인" ;;
+esac
 
 if [[ "$fail" == 0 ]]; then
     log "복구 완료 — 전부 정상."
