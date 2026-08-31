@@ -32,6 +32,9 @@ docker compose -f compose/_hosts/mac-server.yml --env-file compose/_hosts/mac-se
 
 이후 airflow workload (edge worker) 는 별도 repo — airflow-stack 의 `infra/mac-server/` 참조.
 
+재부팅·OS 업데이트·sleep/wake 후 복구는 `scripts/recover-mac-server.sh` — 절차는 `docs/runbook.md`
+"mac-server 재부팅 / OS 업데이트 후 복구".
+
 ## Colima 자원 변경
 
 ```

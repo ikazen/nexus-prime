@@ -196,51 +196,52 @@ sudo tailscale up --ssh
 
 ops-vm public IP 가 바뀌면 (인스턴스 재생성 등) 외부 DNS 의 `airflow.<your-domain>` A 레코드 갱신. reserved IP 라 보통 안 바뀜.
 
-## mac-server 슬립 방지 설정
+## mac-server 재부팅 / OS 업데이트 후 복구
 
-macOS 업데이트 후 전원 설정이 초기화될 수 있다. 업데이트·재설치 후 반드시 확인.
-
-**현재 설정 확인:**
-```bash
-pmset -g | grep -E 'sleep|standby|hibernate|disksleep'
-# sleep 0, standby 0, hibernatemode 0, disksleep 0 이어야 함
-```
-
-**재적용 (초기화된 경우):**
-```bash
-sudo pmset -a sleep 0 standby 0 hibernatemode 0 disksleep 0
-```
-
-**부팅 시 자동 적용 (LaunchDaemon — 최초 1회 설치):**
-```bash
-sudo cp ~/projects/nexus-prime/hosts/mac-server/launchd/local.pmset-nosleep.plist /Library/LaunchDaemons/
-sudo launchctl load /Library/LaunchDaemons/local.pmset-nosleep.plist
-```
-
-LaunchDaemon은 root로 부팅 시 실행되므로 OS 업데이트 후에도 자동 재적용된다.
-
-## mac-server 재부팅
-
-재부팅 전 edge-worker를 먼저 내려야 한다. 그냥 재부팅하면 Airflow DB에 `starting` 상태가 잔류해 재시작 루프에 빠짐.
+`scripts/recover-mac-server.sh` 가 전 과정을 자동화한다 (WSL 에서 실행, 멱등). 스크립트가
+pmset 슬립 방지 재적용 → Colima → DOCKER_GID 정합 → MinIO/promtail → LaunchAgent 3종 →
+sleepwatcher → edge worker(`mac-server` + `mac-server-big`) 재등록 → 검증까지 한다.
 
 ```bash
-ssh mac-server
-cd ~/projects/airflow-stack   # edge-worker compose 위치
-docker compose stop edge-worker
-# 이후 재부팅
+# 계획된 재부팅 전 — edge worker 를 drain 시켜 OFFLINE 로 내린다
+#   (그냥 재부팅하면 메타DB 에 running/starting 이 잔류해 crash loop)
+bash scripts/recover-mac-server.sh --pre-reboot
+
+# 재부팅·OS 업데이트·sleep/wake 후 — 복구
+bash scripts/recover-mac-server.sh
 ```
 
-재부팅 후 Colima·MinIO는 LaunchAgent / `restart: unless-stopped` 로 자동 복구. edge-worker도 자동 재시작됨.
+**스크립트가 못 하는 것 (사람이 직접):**
 
-**edge-worker가 재시작 루프에 빠진 경우 복구:**
+- **맥을 물리적으로 깨우기.** 자는 동안은 SSH·tailnet 도달 불가라 원격 복구 불가능.
+  스크립트는 도달 실패 시 원인(dark wake 여부)을 짚어주고 멈춘다.
+- **`sudo` 비밀번호가 필요한 pmset/LaunchDaemon 재적용.** `sudo -n` 이 안 통하면 스크립트가
+  실행할 명령을 그대로 출력한다. 맥에서 직접:
+  ```bash
+  sudo pmset -a sleep 0 standby 0 hibernatemode 0 disksleep 0
+  sudo cp ~/projects/nexus-prime/hosts/mac-server/launchd/local.pmset-nosleep.plist /Library/LaunchDaemons/
+  sudo launchctl load /Library/LaunchDaemons/local.pmset-nosleep.plist
+  ```
+  LaunchDaemon 은 root 로 부팅 시 실행되므로 설치해두면 OS 업데이트 후에도 pmset 이 자동 재적용된다.
+
+**진단 지문:** edge worker(`mac-server`/`mac-server-big`)가 `unknown` 이고, Prometheus
+`up{job="node_mac_server"}` 가 **~50분마다 5분씩만 `1`** 이면 = 맥이 macOS dark wake 중이다.
+즉 OS 업데이트가 pmset 슬립 방지 설정을 되돌렸고, 맥이 자면서 heartbeat 150s 를 못 채우는 것.
+워커·Colima 는 정상 — 맥을 깨우고 스크립트를 돌리면 된다.
+
+**수동 fallback** (스크립트가 부분 실패할 때 edge worker 만 손으로):
 ```bash
-# ops-vm에서 DB 상태 강제 변경 후 제거
-docker exec postgres psql -U airflow -d airflow -c "UPDATE edge_worker SET state='offline' WHERE worker_name='mac-server';"
-docker exec ops-vm-api-server-1 airflow edge remove-remote-edge-worker -H mac-server
-
-# mac-server에서 컨테이너 재생성 (PID 파일 초기화)
-ssh mac-server "cd ~/projects/airflow-stack && docker compose down edge-worker && docker compose up -d edge-worker"
+# mac-server: crash loop 정지
+ssh mac-server "cd ~/projects/airflow-stack && docker compose -f infra/mac-server/docker-compose.yml stop edge-worker-default edge-worker-big"
+# ops-vm: stale 등록 삭제 (두 이름 모두, 다른 워커는 건드리지 말 것)
+ssh ops-vm "docker exec postgres psql -U airflow -d airflow -c \"UPDATE edge_worker SET state='offline' WHERE worker_name IN ('mac-server','mac-server-big')\""
+ssh ops-vm "docker exec airflow-dag-processor-1 airflow edge remove-remote-edge-worker -H mac-server"
+ssh ops-vm "docker exec airflow-dag-processor-1 airflow edge remove-remote-edge-worker -H mac-server-big"
+# mac-server: force-recreate (docker restart 연타 금지 — restart:unless-stopped 와 경합해 crash loop)
+ssh mac-server "cd ~/projects/airflow-stack && docker compose -f infra/mac-server/docker-compose.yml up -d --force-recreate edge-worker-default edge-worker-big"
 ```
+
+재부팅 후 Colima·MinIO 는 LaunchAgent / `restart: unless-stopped` 로 자동 복구된다.
 
 ## colima 자원 변경 (mac-server)
 
